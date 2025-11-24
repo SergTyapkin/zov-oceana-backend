@@ -1,0 +1,62 @@
+name: ${BACKEND_COMPOSE_NAME:-backend-compose}
+services:
+  app:
+    container_name: ${APP_CONTAINER_NAME}
+    build:
+      context: ../
+      dockerfile: ./docker-deploy/Dockerfile
+      args:
+        - PYTHON_RELEASE
+    ports:
+      - ${PORT}:9000
+    environment:
+      - PROJECT_NAME
+      - VERSION
+      - DEBUG
+      - DB_ECHO_LOG
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=${DB_CONTAINER_NAME}
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_NAME=${POSTGRES_DB}
+      - MAIL_PASSWORD
+      - TG_BOT_TOKEN
+      - TG_BOT_ENABLED
+    restart: unless-stopped
+    volumes:
+      - ../.env:/app/.env:r
+      - ./images_data:/app/images:rwo
+      - ./pg_backups:/app/pg_backups:r
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend-internal
+      - front-back
+
+  db:
+    container_name: ${DB_CONTAINER_NAME}
+    image: postgres:${POSTGRES_RELEASE:-15.3-alpine}
+    ports:
+      - ${DB_PORT}:${POSTGRES_PORT}
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_DB
+    healthcheck:
+      test: pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data:rwo
+      - ./pg_backups:/pg_backups:w
+    networks:
+       - backend-internal
+
+networks:
+  backend-internal:
+  front-back:
