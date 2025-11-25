@@ -20,7 +20,7 @@ def addressesGet(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if userData['id'] != userId and userData['caneditusers'] is None:
+    if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать адреса другого пользователя', HTTP_NO_PERMISSIONS)
 
     if search is None: search = ''
@@ -46,7 +46,7 @@ def addressCreate(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if userData['id'] != userId and userData['caneditusers'] is None:
+    if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать адреса другого пользователя', HTTP_NO_PERMISSIONS)
 
     address = DB.execute(SQLAddresses.insertAddress, [userId, title, city, street, house, entrance, code, comment])
@@ -80,7 +80,7 @@ def addressUpdate(userData):
     if addressData is None:
         return jsonResponse("Адрес не найден", HTTP_NOT_FOUND)
 
-    if addressData['userid'] != userData['id'] and userData['caneditusers'] is None:
+    if str(addressData['userid']) != str(userData['id']) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав менять адрес другого пользователя', HTTP_NO_PERMISSIONS)
 
     if title is None: title = addressData['title']
@@ -115,7 +115,7 @@ def addressDelete(userData):
     if addressData is None:
         return jsonResponse("Адрес не найден", HTTP_NOT_FOUND)
 
-    if addressData['userid'] != userData['id'] and userData['caneditusers'] is None:
+    if str(addressData['userid']) != str(userData['id']) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав менять адрес другого пользователя', HTTP_NO_PERMISSIONS)
 
     DB.execute(SQLAddresses.deleteAddressById, [id])

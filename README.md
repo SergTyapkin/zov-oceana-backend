@@ -1,8 +1,8 @@
-![GithubCI](https://github.com/SergTyapkin/velo-marshals-backend/actions/workflows/deployMain.yml/badge.svg)
+![GithubCI](https://github.com/SergTyapkin/zov-oceana-backend/actions/workflows/deployMain.yml/badge.svg)
 
-# Velo Marshals Backend
-Бэкенд для сайта веломаршалов московских велофестивалей
-[Репозиторий фронтенда с картинками](https://github.com/SergTyapkin/velo-marshals-frontend)
+# Zov Oceana Backend
+Бэкенд для сайта интернет-магазина морепродуктов
+[Репозиторий фронтенда с картинками](https://github.com/SergTyapkin/zov-oceana-frontend)
 
 Используемые технологии:
 

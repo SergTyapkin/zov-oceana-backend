@@ -1,3 +1,6 @@
+import random
+import string
+
 from flask import Blueprint
 
 from src.TgBot.TgBot import TgBotMessageTexts, TgBot
@@ -5,269 +8,192 @@ from src.utils.access import *
 from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
 
-from src.database.SQLRequests import goods as SQLEvents
+from src.database.SQLRequests import orders as SQLOrders
+from src.database.SQLRequests import addresses as SQLAddresses
+from src.database.SQLRequests import goods as SQLGoods
 
-app = Blueprint('registrations', __name__)
+app = Blueprint('orders', __name__)
 
 
-@app.route("/event", methods=["GET"])
-@login_and_can_edit_registrations_required
-def getRegistrationsByEvent(userData):
+@app.route("", methods=["GET"])
+@login_required
+def getOrder(userData):
     try:
         req = request.args
-        eventId = req['eventId']
-        isConfirmed = req.get('isConfirmed')
+        orderId = req['orderId']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if isConfirmed is not None:
-        resp = DB.execute(SQLEvents.selectRegistrationsByEventidIsConfirmed, [eventId, isConfirmed], manyResults=True)
-    else:
-        resp = DB.execute(SQLEvents.selectRegistrationsByEventid, [eventId], manyResults=True)
-    if resp is None:
-        return jsonResponse("Событие не найдено", HTTP_NOT_FOUND)
+    order = DB.execute(SQLOrders.selectOrderById, [orderId])
+    if order is None:
+        return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
+    if str(order['userid']) != str(userData['userid']) and not userData['caneditorders']:
+        return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
-    return jsonResponse({'registrations': resp})
+    print(order)
+    return jsonResponse(order)
 
-@app.route("/event/user", methods=["GET"])
-@login_and_can_edit_registrations_required
-def getRegistrationsByEventUser(userData):
+@app.route("/user", methods=["GET"])
+@login_required
+def getUserOrders(userData):
     try:
         req = request.args
-        eventId = req['eventId']
         userId = req['userId']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    resp = DB.execute(SQLEvents.selectRegistrationByUseridEventid, [userId, eventId])
-    if resp is None:
-        return jsonResponse("Регистрация не найдена", HTTP_NOT_FOUND)
+    if str(userId) != str(userData['userid']) and not userData['caneditorders']:
+        return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
-    return jsonResponse(resp)
+    orders = DB.execute(SQLOrders.selectUserOrdersByUserId, [userId], manyResults=True)
+    print(orders)
+
+    return jsonResponse({'orders': orders})
 
 
-@app.route("/event", methods=["POST"])
+@app.route("", methods=["POST"])
 @login_required
-def registerToEvent(userData):
+def createOrder(userData):
     try:
         req = request.json
-        eventId = req['eventId']
         userId = req['userId']
-        userComment = req.get('userComment')
+        addressId = req['addressId']
+        goods = req['goods']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if (str(userId) != str(userData['id'])) and (not userData['caneditregistrations']):
-        return jsonResponse("Недостаточно прав доступа", HTTP_NO_PERMISSIONS)
-
-    eventData = DB.execute(SQLEvents.selectEventById, [eventId])
-    if eventData is None:
-        return jsonResponse("Такого события не существует", HTTP_NOT_FOUND)
-
-    if (not eventData['isinfuture']) and (not userData['caneditregistrations']):
-        return jsonResponse("Событие уже закончилось, а вы - не админ", HTTP_DATA_CONFLICT)
-
-    if (not eventData['isregistrationopened']) and (not userData['caneditregistrations']):
-        return jsonResponse("Регистрация на событие закрыта, а вы - не админ", HTTP_DATA_CONFLICT)
-
-    fullUserData = DB.execute(SQLUser.selectUserById, [userId])
     try:
-        response = DB.execute(SQLEvents.insertRegistration, [eventId, userId, userComment, fullUserData['level']])
-    except:
-        return jsonResponse("Пользователь уже записан на это мероприятие", HTTP_DATA_CONFLICT)
+        for goodsOne in goods:
+            if \
+                'id' not in goodsOne or \
+                'amount' not in goodsOne:
+                return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    if (str(userId) != str(userData['id'])) and (not userData['caneditorders']):
+        return jsonResponse("Нет прав на создание заказов для другого пользователя", HTTP_NO_PERMISSIONS)
+
+    address = DB.execute(SQLAddresses.selectAddressById, [addressId])
+    if not address:
+        return jsonResponse("Адрес не найден", HTTP_NOT_FOUND)
+    if str(address['userid']) != str(userId):
+        return jsonResponse("Нельзя заказать на чужой адрес", HTTP_INVALID_DATA)
+
+    symbols = string.digits
+    randomSecretCode = ''.join(random.choice(symbols) for _ in range(ORDER_SECRET_CODE_GENERATE_LEN))
+    maxOrderNumber = DB.execute(SQLOrders.selectMaxOrderNumber, [])
+    maxOrderNumber = maxOrderNumber['maxnumber']
+    orderData = DB.execute(SQLOrders.insertOrder, [maxOrderNumber + 1, userId, addressId, randomSecretCode])
+    if orderData is None:
+        return jsonResponse("Не удалось создать заказ", HTTP_INTERNAL_ERROR)
+
+    goodsArrayInfoText = ""
+    for goodsOne in goods:
+        goodsOneData = DB.execute(SQLGoods.selectGoodsById, [goodsOne['id']])
+        if goodsOneData is None:
+            return jsonResponse(f"Товар #{goodsOne['id']} не найден", HTTP_NOT_FOUND)
+
+        goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOneData['cost'], goodsOne['amount']])
+        if goodsInOrderData is None:
+            return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
+
+        goodsArrayInfoText += f"*{goodsOneData['title']}*, {goodsOne['amount']}кг\n"
 
     insertHistory(
         userId,
-        'registration',
-        f'Add registration on event: "{eventData["title"]}" #{eventId}'
+        'order',
+        f'Creates order: {orderData["number"]} #{orderData["id"]}", goods: {goods}'
     )
 
     try:
-        fullUserData = DB.execute(SQLUser.selectUserById, [userId])
-        TgBot.sendMessage(fullUserData['tgid'], TgBotMessageTexts.registrationGotten, eventData["title"])
-    except Exception as err:
-        print("Error. Cannot select user and send message by tg bot", err)
-        pass
-    return jsonResponse(response)
-
-
-@app.route("/event", methods=["DELETE"])
-@login_required
-def unregisterToEvent(userData):
-    try:
-        req = request.json
-        eventId = req['eventId']
-        userId = req['userId']
-    except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
-
-    if (str(userId) != str(userData['id'])) and (not userData['caneditregistrations']):
-        return jsonResponse("Недостаточно прав доступа", HTTP_NO_PERMISSIONS)
-
-    eventData = DB.execute(SQLEvents.selectEventById, [eventId])
-    if not eventData:
-        return jsonResponse("Такого события не существует", HTTP_NOT_FOUND)
-
-    if (not eventData['isinfuture']) and (not userData['caneditregistrations']):
-        return jsonResponse("Событие уже закончилось, а вы - не админ", HTTP_DATA_CONFLICT)
-
-    DB.execute(SQLEvents.deleteRegistrationByEventidUserid, [eventId, userId])
-
-    insertHistory(
-        userId,
-        'registration',
-        f'Delete registration from event: "{eventData["title"]}" #{eventId}'
-    )
-
-    try:
-        fullUserData = DB.execute(SQLUser.selectUserById, [userId])
-        TgBot.sendMessage(fullUserData['tgid'], TgBotMessageTexts.registrationCanceled, eventData["title"])
+        fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
+        TgBot.sendMessage(fullUserData['tgid'], TgBotMessageTexts.orderCreated, orderData["number"], goodsArrayInfoText)
     except Exception as err:
         print("Error. Cannot select user and send message by tg bot", err)
         pass
 
-    return jsonResponse("Запись на событие удалена")
-
+    return jsonResponse(orderData)
 
 @app.route("", methods=["PUT"])
-@login_and_can_edit_registrations_required
-def updateRegistrationData(userData):
+@login_and_can_edit_goods_required
+def updateOrderData(userData):
     try:
         req = request.json
         id = req['id']
-        isConfirmed = req.get('isConfirmed')
-        adminComment = req.get('adminComment')
-        level = req.get('level')
-        salary = req.get('salary')
-        taskText = req.get('taskText')
-        lapsPassed = req.get('lapsPassed')
-        cameDate = req.get('leaveDate')
-        leaveDate = req.get('leaveDate')
+        addressId = req.get('addressId')
+        status = req.get('status')
+        trackingCode = req.get('trackingCode')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    registrationData = DB.execute(SQLEvents.selectRegistrationById, [id])
-    if registrationData is None:
-        return jsonResponse("Такой регистрации не существует", HTTP_NOT_FOUND)
+    orderData = DB.execute(SQLOrders.selectOrderById, [id])
+    if orderData is None:
+        return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
 
-    if isConfirmed is None and 'isConfirmed' not in req: isConfirmed = registrationData['isconfirmed']
-    if adminComment is None: adminComment = registrationData['admincomment']
-    if level is None: level = registrationData['level']
-    if salary is None: salary = registrationData['salary']
-    if taskText is None: taskText = registrationData['tasktext']
-    if lapsPassed is None: lapsPassed = registrationData['lapspassed']
-    if cameDate is None: cameDate = registrationData['camedate']
-    if leaveDate is None: leaveDate = registrationData['leavedate']
+    if addressId is None: addressId = orderData['addressid']
+    if status is None: status = orderData['status']
+    if trackingCode is None: trackingCode = orderData['trackingcode']
 
-    response = DB.execute(SQLEvents.updateRegistrationById,
-                          [isConfirmed, adminComment, level, salary, taskText, lapsPassed, cameDate, leaveDate, id])
+    try:
+        response = DB.execute(SQLOrders.updateOrderById, [addressId, status, trackingCode, id])
+    except Exception as err:
+        return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 
     insertHistory(
-        registrationData['userid'],
-        'registration',
-        f'Update registration: {json.dumps(req)}'
+        userData['userid'],
+        'order',
+        f'Update order: {orderData["number"]} #{orderData["id"]} {json.dumps(req)}'
     )
 
-    initialIsConfirmed = req.get('isConfirmed')
-    if initialIsConfirmed is not None and initialIsConfirmed != registrationData['isconfirmed']:
-        try:
-            fullUserData = DB.execute(SQLUser.selectUserById, [registrationData['userid']])
-            fullEventData = DB.execute(SQLEvents.selectEventById, [registrationData['eventid']])
-            message = TgBotMessageTexts.registrationConfirmed if initialIsConfirmed else TgBotMessageTexts.registrationRejected
-            TgBot.sendMessage(fullUserData['tgid'], message, fullEventData['title'])
-        except Exception as err:
-            print("Error. Cannot select user and send message by tg bot", err)
-            pass
+    try:
+        fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
+        messageText = "Статус заказа изменён на какой-то другой (???)"
+        if status == OrderStatuses.created:
+            messageText = TgBotMessageTexts.orderStatusToCreated
+        elif status == OrderStatuses.paid:
+            messageText = TgBotMessageTexts.orderStatusToPaid
+        elif status == OrderStatuses.prepared:
+            messageText = TgBotMessageTexts.orderStatusToPrepared
+        elif status == OrderStatuses.delivered:
+            messageText = TgBotMessageTexts.orderStatusToDelivered
+        elif status == OrderStatuses.cancelled:
+            messageText = TgBotMessageTexts.orderStatusToCancelled
+        TgBot.sendMessage(fullUserData['tgid'], messageText, orderData["number"])
+    except Exception as err:
+        print("Error. Cannot select user and send message by tg bot", err)
+        pass
+
     return jsonResponse(response)
 
 
-@app.route("/event/comment", methods=["PUT"])
-@login_required
-def updateSelfRegistrationComment(userData):
+@app.route("", methods=["DELETE"])
+@login_and_can_edit_orders_required
+def deleteOrder(userData):
     try:
         req = request.json
-        id = req['id']
-        userComment = req['userComment']
+        orderId = req['orderId']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    registrationData = DB.execute(SQLEvents.selectRegistrationById, [id])
-    if registrationData is None:
-        return jsonResponse("Такой регистрации не существует", HTTP_NOT_FOUND)
-    if str(registrationData['userid']) != str(userData['id']) and not userData['caneditregistrations']:
-        return jsonResponse("Нет прав на редактирование чужого комментария", HTTP_NO_PERMISSIONS)
+    orderData = DB.execute(SQLOrders.selectOrderById, [orderId])
+    if not orderData:
+        return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
+
+    DB.execute(SQLOrders.deleteOrderById, [orderId])
 
     insertHistory(
-        registrationData['userid'],
-        'registration',
-        f'Update comment: {registrationData["usercomment"]}'
+        userData['id'],
+        'order',
+        f'Delete order: #{orderId}'
     )
 
-    response = DB.execute(SQLEvents.updateRegistrationUserCommentById, [userComment, id])
-    return jsonResponse(response)
-
-
-@app.route("/camedate", methods=["PUT"])
-@login_and_can_edit_registrations_required
-def updateCameDate(userData):
     try:
-        req = request.json
-        id = req['id']
+        fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
+        TgBot.sendMessage(fullUserData['tgid'], TgBotMessageTexts.orderDeleted, orderData["number"])
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        print("Error. Cannot select user and send message by tg bot", err)
+        pass
 
-    registrationData = DB.execute(SQLEvents.updateRegistrationCameDateById, [id])
-    if registrationData is None:
-        return jsonResponse("Такой регистрации не существует", HTTP_NOT_FOUND)
+    return jsonResponse("Заказ удален")
 
-    insertHistory(
-        registrationData['userid'],
-        'registration',
-        f'Set came date: {registrationData["camedate"]}'
-    )
-
-    return jsonResponse(registrationData)
-
-
-@app.route("/leavedate", methods=["PUT"])
-@login_and_can_edit_registrations_required
-def updateLeaveDate(userData):
-    try:
-        req = request.json
-        id = req['id']
-    except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
-
-    registrationData = DB.execute(SQLEvents.updateRegistrationLeaveDateById, [id])
-    if registrationData is None:
-        return jsonResponse("Такой регистрации не существует", HTTP_NOT_FOUND)
-
-    insertHistory(
-        registrationData['userid'],
-        'registration',
-        f'Set leave date: {registrationData["leavedate"]}'
-    )
-
-    return jsonResponse(registrationData)
-
-
-@app.route("/lap-increase", methods=["PUT"])
-@login_and_can_edit_registrations_required
-def updateIncreaseLapsPassed(userData):
-    try:
-        req = request.json
-        id = req['id']
-    except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
-
-    registrationData = DB.execute(SQLEvents.updateIncreaseRegistrationLapsPassedById, [id])
-    if registrationData is None:
-        return jsonResponse("Такой регистрации не сущеcтвует", HTTP_NOT_FOUND)
-
-    insertHistory(
-        registrationData['userid'],
-        'registration',
-        f'Increase lap by 1. Number of laps: {registrationData["lapspassed"]}'
-    )
-
-    return jsonResponse(registrationData)

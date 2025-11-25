@@ -10,7 +10,7 @@ from src.database.SQLRequests import carts as SQLCarts
 app = Blueprint('carts', __name__)
 
 
-@app.route("")
+@app.route("/goods")
 @login_required
 def cartsGet(userData):
     try:
@@ -19,7 +19,7 @@ def cartsGet(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if userData['id'] != userId and userData['caneditusers'] is None:
+    if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать корзину другого пользователя', HTTP_NO_PERMISSIONS)
 
     # get all goods in cart list
@@ -27,7 +27,7 @@ def cartsGet(userData):
     return jsonResponse({"goods": goods})
 
 
-@app.route("", methods=["POST"])
+@app.route("/goods", methods=["POST"])
 @login_required
 def addGoodsToCart(userData):
     try:
@@ -38,7 +38,7 @@ def addGoodsToCart(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if userData['id'] != userId and userData['caneditusers'] is None:
+    if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав добавлять товары в корзину другого пользователя', HTTP_NO_PERMISSIONS)
 
     cart = DB.execute(SQLCarts.insertGoodsInCart, [goodsId, userId, amount])
@@ -52,7 +52,7 @@ def addGoodsToCart(userData):
     return jsonResponse(cart)
 
 
-@app.route("", methods=["PUT"])
+@app.route("/goods", methods=["PUT"])
 @login_required
 def updateGoodsInCartAmount(userData):
     try:
@@ -67,7 +67,7 @@ def updateGoodsInCartAmount(userData):
     if goods is None:
         return jsonResponse("Товар в корзине не найден", HTTP_NOT_FOUND)
 
-    if userId != userData['id'] and userData['caneditusers'] is None:
+    if str(userId) != str(userData['id']) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав менять товары в корзине другого пользователя', HTTP_NO_PERMISSIONS)
 
     cart = DB.execute(SQLCarts.updateGoodsInCartAmountByUserIdGoodsId, [amount, userId, goodsId])
@@ -81,25 +81,26 @@ def updateGoodsInCartAmount(userData):
     return jsonResponse(cart)
 
 
-@app.route("", methods=["DELETE"])
+@app.route("/goods/many", methods=["DELETE"])
 @login_required
 def deleteGoodsFromCart(userData):
     try:
         req = request.json
         userId = req['userId']
-        goodsId = req['goodsId']
+        goodsIds = req['goodsIds']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if userId != userData['id'] and userData['caneditusers'] is None:
+    if str(userId) != str(userData['id']) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав менять корзину другого пользователя', HTTP_NO_PERMISSIONS)
-
-    DB.execute(SQLCarts.deleteGoodsInCartsByUserIdGoodsId, [userId, goodsId])
+    
+    for goodsId in goodsIds:
+        DB.execute(SQLCarts.deleteGoodsInCartsByUserIdGoodsId, [userId, goodsId])
 
     insertHistory(
         userData['id'],
         'cart',
-        f'Delete goods from cart: User #{userId}, Goods #{goodsId}'
+        f'Delete goods from cart: User #{userId}, Goods ids #{goodsIds}'
     )
 
     return jsonResponse("Товар удален из корзины")

@@ -1,6 +1,6 @@
 insertOrder = \
-    "INSERT INTO orders (number, userId, addressId, createdDate, updatedDate, status) " \
-    "VALUES (%s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO orders (number, userId, addressId, secretCode) " \
+    "VALUES (%s, %s, %s, %s) " \
     "RETURNING *"
 
 insertOrderGoods = \
@@ -28,16 +28,18 @@ selectUserOrdersByUserId = \
     "JOIN goods ON ordersGoods.goodsId = goods.id " \
     "WHERE orders.id = %s"
 
+selectMaxOrderNumber = \
+    "SELECT MAX(number) as maxNumber " \
+    "FROM orders"
+
 # ------------------
 
 updateOrderById = \
     "UPDATE orders " \
-    "SET number = %s, " \
-    "userId = %s, " \
-    "addressId = %s, " \
-    "createdDate = %s, " \
+    "SET addressId = %s, " \
     "updatedDate = NOW(), " \
-    "status = %s " \
+    "status = %s, " \
+    "trackingCode = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 

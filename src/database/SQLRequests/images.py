@@ -1,5 +1,10 @@
-insertImage = \
+insertImageByPath = \
     "INSERT INTO images (type, path) " \
+    "VALUES (%s, %s) " \
+    "RETURNING *"
+
+insertImageByBytes = \
+    "INSERT INTO images (type, bytes) " \
     "VALUES (%s, %s) " \
     "RETURNING *"
 
@@ -17,6 +22,15 @@ selectImageById = \
 selectGoodsImageById = \
     "SELECT * FROM goodsImages " \
     "WHERE id = %s"
+
+selectGoodsImagesByGoodsId = \
+    "SELECT * FROM goodsImages " \
+    "WHERE goodsId = %s " \
+    "ORDER BY sortingKey"
+
+selectMaxImageSortingKeyByGoodsId = \
+    "SELECT MAX(sortingKey) as maxSortingKey FROM goodsImages " \
+    "WHERE goodsId = %s"
 
 # ------------------
 

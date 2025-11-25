@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 HTTP_INVALID_DATA = 400
 HTTP_INVALID_AUTH_DATA = 401
 HTTP_NO_PERMISSIONS = 403
@@ -9,3 +11,14 @@ HTTP_INTERNAL_ERROR = 500
 HTTP_OK = 200
 
 MAX_LOG_DATA_LENGTH = 512
+
+IMAGE_UID_GENERATE_LEN = 30
+ORDER_SECRET_CODE_GENERATE_LEN = 6
+
+@dataclass
+class OrderStatuses:
+    created = 'created'
+    paid = 'paid'
+    prepared = 'prepared'
+    delivered = 'delivered'
+    cancelled = 'cancelled'

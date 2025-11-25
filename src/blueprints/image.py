@@ -17,7 +17,6 @@ import base64
 app = Blueprint('images', __name__)
 
 MAX_SIZE = config['max_image_size_px']
-IMAGE_ID_GENERATE_LEN = 30
 
 
 @app.route("/<imageId>.<imageExt>")
@@ -44,11 +43,12 @@ def imageGet(imageId, imageExt=None):
 _leftLen = len('data:image/')
 _rightLen = len(';base64')
 @app.route("", methods=["POST"])
-@login_required
-def imageUpload(userData):
+@login_and_can_edit_goods_required
+def imageGoodsUpload(userData):
     try:
         req = request.json
         dataUrl = req['dataUrl']
+        goodsId = req['goodsId']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
@@ -77,33 +77,37 @@ def imageUpload(userData):
         img.save(optimized, format=saveFormat, optimize=True, quality=85)
         hex_data = optimized.getvalue()
 
-        resp = DB.execute(SQLImages.insertImage, [userData['id'], saveFormat.lower(), hex_data])
+        imageData = DB.execute(SQLImages.insertImageByBytes, [saveFormat.lower(), hex_data])
 
         insertHistory(
             userData["id"],
             'image',
-            f'Image saved to database: #{resp["id"]}, format: {saveFormat}, size: {img.size}',
+            f'Image saved to database: #{imageData["id"]}, format: {saveFormat}, size: {img.size}',
+        )
+    else:
+        chars = string.ascii_letters + string.digits
+        randomFileNameUid = ''.join(random.choice(chars) for _ in range(IMAGE_UID_GENERATE_LEN))
+        fileName = f"{userData['id']}_{randomFileNameUid}.{saveFormat.lower()}"
+        saveFullPath = os.path.join(config['save_images_folder'], fileName)
+        img.save(saveFullPath, format=saveFormat, optimize=True, quality=85)
+
+        imageData = DB.execute(SQLImages.insertImageByPath, [saveFormat.lower(), fileName])
+
+        insertHistory(
+            userData["id"],
+            'image',
+            f'Image saved to filesystem at "{saveFullPath}", format: {saveFormat}, size: {img.size}, #{imageData["id"]}',
         )
 
-        return jsonResponse({'id': resp['id']})
+    maxSortingKey = DB.execute(SQLImages.selectMaxImageSortingKeyByGoodsId, [goodsId], manyResults=True)
+    maxSortingKey = maxSortingKey['maxsortingkey'] if maxSortingKey is not None else 0
 
-    chars = string.ascii_letters + string.digits
-    randomId = ''.join(random.choice(chars) for _ in range(IMAGE_ID_GENERATE_LEN))
-    fileName = f"{userData['id']}_{randomId}.{saveFormat.lower()}"
-    saveFullPath = os.path.join(config['save_images_folder'], fileName)
-    img.save(saveFullPath, format=saveFormat, optimize=True, quality=85)
-
-    insertHistory(
-        userData["id"],
-        'image',
-        f'Image saved to filesystem at "{saveFullPath}", format: {saveFormat}, size: {img.size}',
-    )
-
-    return jsonResponse({'id': fileName})
+    DB.execute(SQLImages.insertGoodsImage, [goodsId, imageData['id'], maxSortingKey + 1])
+    return jsonResponse({'id': imageData['id'], 'path': imageData['path']})
 
 
 @app.route("", methods=["DELETE"])
-@login_required_return_id
+@login_and_can_edit_goods_required
 def imageDelete(userId):
     try:
         req = request.json
@@ -112,11 +116,7 @@ def imageDelete(userId):
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
     if config['save_images_to_db']:
-        resp = DB.execute(SQLImages.selectImageById, [imageId])
-        if not resp:
-            return jsonResponse("Изображение не найдено", HTTP_NOT_FOUND)
-
-        DB.execute(SQLImages.deleteImageByIdAuthor, [imageId, userId])
+        DB.execute(SQLImages.deleteImageById, [imageId])
 
         insertHistory(
             userId,
@@ -124,19 +124,25 @@ def imageDelete(userId):
             f'Image deleted from database: #{imageId}',
         )
 
-        return jsonResponse("Изображение удалено если вы его автор")
+        return jsonResponse("Изображение удалено")
 
-    fileName = f"{imageId}"
+    imageData = DB.execute(SQLImages.selectImageById, [imageId])
+    if not imageData:
+        return jsonResponse("Изображение не найдено в базе данных", HTTP_NOT_FOUND)
+
+    fileName = imageData['path']
     fullPath = os.path.join(config['save_images_folder'], fileName)
     if not os.path.isfile(fullPath):
-        return jsonResponse("Изображение не найдено", HTTP_NOT_FOUND)
+        return jsonResponse("Изображение не найдено в файловой системе", HTTP_NOT_FOUND)
 
     os.remove(fullPath)
 
     insertHistory(
         userId,
         'image',
-        f'Image deleted from filesystem from "{fullPath}"',
+        f'Image deleted from filesystem from "{fullPath}", #{imageData["id"]}',
     )
 
     return jsonResponse("Изображение удалено")
+
+
