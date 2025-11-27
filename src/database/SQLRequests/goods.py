@@ -1,6 +1,6 @@
 insertGoods = \
-    "INSERT INTO goods (title, description, fromLocation, amountLeft, amountStep, cost, isOnSale, characters) " \
-    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO goods (title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, characters) " \
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 insertGoodsCategories = \
@@ -17,15 +17,16 @@ def selectGoods(filters):
     costMax = filters.get('costMax')
     isOnSale = filters.get('isOnSale') != False
     amountMin = filters.get('amountMin')
+    isWeighed = filters.get('isWeighed')
     fromLocation = filters.get('fromLocation')
     limit = filters.get('limit')
 
     return \
-            "SELECT goods.*, categories.id categoryId, category.title categoryTitle FROM goods " \
-            "LEFT JOIN goodsCategories ON goods.id = goodsCategories.goodsId " + \
-            "LEFT JOIN categories ON goodsCategories.categoryId = category.id " + \
-            f"WHERE isOnSale = '{isOnSale}' " + \
-            (f"category.id = '{categoryId}' AND " if categoryId is not None else "") + \
+            "SELECT * FROM goods " \
+            "WHERE " + \
+            (f"isOnSale = '{isOnSale}' AND " if isOnSale is not None else "") + \
+            (f"isWeighed = '{isWeighed}' AND " if isWeighed is not None else "") + \
+            (f"categories.id = '{categoryId}' AND " if categoryId is not None else "") + \
             (f"cost <= '{costMax}' AND " if costMax is not None else "") + \
             (f"cost >= '{costMin}' AND " if costMin is not None else "") + \
             (f"amountTotal >= '{amountMin}' AND " if amountMin is not None else "") + \
@@ -36,16 +37,20 @@ def selectGoods(filters):
             (f"LIMIT {limit} " if limit is not None else "")
 
 selectGoodsById = \
-    "SELECT goods.*, categories.id categoryId, category.title categoryTitle FROM goods " \
-    "LEFT JOIN goodsCategories ON goods.id = goodsCategories.goodsId " + \
-    "LEFT JOIN categories ON goodsCategories.categoryId = category.id " + \
-    "WHERE goods.id = %s "
+    "SELECT * FROM goods " \
+    "WHERE id = %s "
+
+selectCategoriesByGoodsId = \
+    "SELECT categories.* FROM categories " \
+    "JOIN goodsCategories ON categories.id = goodsCategories.categoryId " \
+    "JOIN goods ON goodsCategories.goodsId = goods.id " \
+    "WHERE goodsId = %s"
 
 selectGoodsByCategoryId = \
-    "SELECT goods.*, categories.id categoryId, category.title categoryTitle FROM goods " \
-    "LEFT JOIN goodsCategories ON goods.id = goodsCategories.goodsId " + \
-    "LEFT JOIN categories ON goodsCategories.categoryId = category.id " + \
-    "WHERE categories.id = %s "
+    "SELECT goods.* FROM categories " \
+    "JOIN goodsCategories ON goodsCategories.categoryId = categories.id " + \
+    "JOIN goods ON goods.id = goodsCategories.goodsId " + \
+    "WHERE categoryId = %s "
 
 
 # ------------------
@@ -57,7 +62,9 @@ updateGoodsById = \
     "fromLocation = %s, " \
     "amountLeft = %s, " \
     "amountStep = %s, " \
+    "amountMin = %s, " \
     "cost = %s, " \
+    "isWeighed = %s, " \
     "isOnSale = %s, " \
     "characters = %s " \
     "WHERE id = %s " \

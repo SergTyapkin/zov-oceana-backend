@@ -34,7 +34,7 @@ class TgBotClass:
 
     def init(self):
         if not self.is_enabled:
-            print("TgBot not enabled in config")
+            print("[TgBot] TgBot not enabled in config")
             return
 
         try:

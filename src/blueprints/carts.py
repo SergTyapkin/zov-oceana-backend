@@ -10,7 +10,7 @@ from src.database.SQLRequests import carts as SQLCarts
 app = Blueprint('carts', __name__)
 
 
-@app.route("/goods")
+@app.route("")
 @login_required
 def cartsGet(userData):
     try:
@@ -93,7 +93,7 @@ def deleteGoodsFromCart(userData):
 
     if str(userId) != str(userData['id']) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав менять корзину другого пользователя', HTTP_NO_PERMISSIONS)
-    
+
     for goodsId in goodsIds:
         DB.execute(SQLCarts.deleteGoodsInCartsByUserIdGoodsId, [userId, goodsId])
 

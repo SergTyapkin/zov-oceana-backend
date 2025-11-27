@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint
 
 from src.utils.access import *
@@ -5,6 +7,7 @@ from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
 
 from src.database.SQLRequests import goods as SQLGoods
+from src.database.SQLRequests import images as SQLImages
 
 app = Blueprint('goods', __name__)
 
@@ -13,29 +16,48 @@ app = Blueprint('goods', __name__)
 def goodsGet():
     try:
         req = request.args
-        id = req.get('id')
+        id = req['id']
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
+    goodsData = DB.execute(SQLGoods.selectGoodsById, [id])
+    categoriesData = DB.execute(SQLGoods.selectCategoriesByGoodsId, [id], manyResults=True)
+    imagesData = DB.execute(SQLImages.selectGoodsImagesByGoodsId, [id], manyResults=True)
+    goodsData['categories'] = categoriesData
+    goodsData['images'] = imagesData
+    try:
+        goodsData['characters'] = json.loads(goodsData['characters'])
+    except:
+        goodsData['characters'] = None
+    return jsonResponse(goodsData)
+
+@app.route("/all")
+def goodsGetAll():
+    try:
+        req = request.args
         search = req.get('search')
         categoryId = req.get('categoryId')
         costMin = req.get('costMin')
         costMax = req.get('costMax')
         isOnSale = req.get('isOnSale')
+        isWeighed = req.get('isWeighed')
         amountMin = req.get('amountMin')
         fromLocation = req.get('fromLocation')
         limit = req.get('limit')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if id is not None:  # get single goods
-        goodsData = DB.execute(SQLGoods.selectGoodsById, [id], manyResults=True)
-        print(goodsData)
-        return jsonResponse(goodsData)
-
-    # get goods list by filters
     goods = DB.execute(SQLGoods.selectGoods(req), [], manyResults=True)
-    for goods in goods:
-        print(goods)
-    return jsonResponse({"goods": goods})
+    for goodsOne in goods:
+        categoriesData = DB.execute(SQLGoods.selectCategoriesByGoodsId, [goodsOne['id']], manyResults=True)
+        imagesData = DB.execute(SQLImages.selectGoodsImagesByGoodsId, [goodsOne['id']], manyResults=True)
+        goodsOne['categories'] = categoriesData
+        goodsOne['images'] = imagesData
+        try:
+            goodsOne['characters'] = json.loads(goodsOne['characters'])
+        except:
+            goodsOne['characters'] = None
+    return jsonResponse({'goods': goods})
 
 
 @app.route("", methods=["POST"])
@@ -48,13 +70,19 @@ def goodsCreate(userData):
         fromLocation = req['fromLocation']
         amountLeft = req['amountLeft']
         amountStep = req['amountStep']
+        amountMin = req['amountMin']
+        isWeighed = req['isWeighed']
         cost = req['cost']
         isOnSale = True if req.get('isOnSale') is None else req.get('isOnSale')
         characters = req.get('characters')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    goods = DB.execute(SQLGoods.insertGoods, [title, description, fromLocation, amountLeft, amountStep, cost, isOnSale, characters])
+    try:
+        characters = json.dumps(characters)
+    except:
+        characters = None
+    goods = DB.execute(SQLGoods.insertGoods, [title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, characters])
 
     insertHistory(
         userData["id"],
@@ -98,7 +126,9 @@ def goodsUpdate(userData):
         fromLocation = req.get('fromLocation')
         amountLeft = req.get('amountLeft')
         amountStep = req.get('amountStep')
+        amountMin = req.get('amountMin')
         cost = req.get('cost')
+        isWeighed = req.get('isWeighed')
         isOnSale = req.get('isOnSale')
         characters = req.get('characters')
     except Exception as err:
@@ -113,11 +143,13 @@ def goodsUpdate(userData):
     if fromLocation is None: fromLocation = goodsData['fromlocation']
     if amountLeft is None: amountLeft = goodsData['amountleft']
     if amountStep is None: amountStep = goodsData['amountstep']
+    if amountMin is None: amountMin = goodsData['amountmin']
     if cost is None: cost = goodsData['cost']
+    if isWeighed is None: isWeighed = goodsData['isweighed']
     if isOnSale is None: isOnSale = goodsData['isonsale']
     if characters is None: characters = goodsData['characters']
 
-    goods = DB.execute(SQLGoods.updateGoodsById, [title, description, fromLocation, amountLeft, amountStep, cost, isOnSale, characters, id])
+    goods = DB.execute(SQLGoods.updateGoodsById, [title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, characters, id])
 
     insertHistory(
         userData["id"],

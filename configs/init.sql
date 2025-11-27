@@ -42,6 +42,14 @@ CREATE TABLE IF NOT EXISTS secretCodes (
     UNIQUE (userId, type)
 );
 
+------ Images ------
+CREATE TABLE IF NOT EXISTS images (
+    id           SERIAL PRIMARY KEY,
+    type         TEXT NOT NULL,
+    path         TEXT,
+    bytes        BYTEA
+);
+
 ------ Addresses data ------
 CREATE TABLE IF NOT EXISTS addresses (
     id             SERIAL PRIMARY KEY,
@@ -65,7 +73,9 @@ CREATE TABLE IF NOT EXISTS goods (
     fromLocation         TEXT DEFAULT NULL,
     amountLeft           FLOAT NOT NULL,
     amountStep           FLOAT NOT NULL DEFAULT 1,
+    amountMin            FLOAT NOT NULL DEFAULT 0,
     cost                 FLOAT NOT NULL,
+    isWeighed            BOOLEAN NOT NULL,
     isOnSale             BOOLEAN NOT NULL,
     characters           TEXT
 );
@@ -131,13 +141,6 @@ CREATE TABLE IF NOT EXISTS goodsInCarts (
     UNIQUE (goodsId, userId)
 );
 
------- Images ------
-CREATE TABLE IF NOT EXISTS images (
-    id           SERIAL PRIMARY KEY,
-    type         TEXT NOT NULL,
-    path         TEXT,
-    bytes        BYTEA
-);
 
 ------ Total history ------
 CREATE TABLE IF NOT EXISTS history (
