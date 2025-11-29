@@ -24,7 +24,8 @@ selectGoodsImageById = \
     "WHERE id = %s"
 
 selectGoodsImagesByGoodsId = \
-    "SELECT * FROM goodsImages " \
+    "SELECT images.*, goodsImages.sortingKey FROM goodsImages " \
+    "JOIN images ON goodsImages.imageId = images.id " \
     "WHERE goodsId = %s " \
     "ORDER BY sortingKey"
 

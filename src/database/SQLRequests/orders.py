@@ -11,19 +11,19 @@ insertOrderGoods = \
 # ------------------
 
 selectOrderById = \
-    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.goodsAmount orderGoodsAmount, goods.title as goodsTitle, goods.previewUrl as goodsPreviewUrl, goods.isOnSale as goodsIsOnSale FROM orders " \
+    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.amount orderGoodsAmount, goods.title as goodsTitle, goods.isOnSale as goodsIsOnSale FROM orders " \
     "JOIN ordersGoods ON orders.id = ordersGoods.orderId " \
     "JOIN goods ON ordersGoods.goodsId = goods.id " \
     "WHERE orders.id = %s"
 
 selectOrdersByGoodsId = \
-    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.goodsAmount orderGoodsAmount, goods.title as goodsTitle, goods.previewUrl as goodsPreviewUrl, goods.isOnSale as goodsIsOnSale FROM orders " \
+    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.amount orderGoodsAmount, goods.title as goodsTitle, goods.isOnSale as goodsIsOnSale FROM orders " \
     "JOIN ordersGoods ON orders.id = ordersGoods.orderId " \
     "JOIN goods ON ordersGoods.goodsId = goods.id " \
     "WHERE goods.id = %s"
 
 selectUserOrdersByUserId = \
-    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.goodsAmount orderGoodsAmount, goods.title as goodsTitle, goods.previewUrl as goodsPreviewUrl, goods.isOnSale as goodsIsOnSale FROM orders " \
+    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.amount orderGoodsAmount, goods.title as goodsTitle, goods.isOnSale as goodsIsOnSale FROM orders " \
     "JOIN ordersGoods ON orders.id = ordersGoods.orderId " \
     "JOIN goods ON ordersGoods.goodsId = goods.id " \
     "WHERE orders.id = %s"

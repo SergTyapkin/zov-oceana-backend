@@ -41,7 +41,10 @@ def addGoodsToCart(userData):
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав добавлять товары в корзину другого пользователя', HTTP_NO_PERMISSIONS)
 
-    cart = DB.execute(SQLCarts.insertGoodsInCart, [goodsId, userId, amount])
+    try:
+        cart = DB.execute(SQLCarts.insertGoodsInCart, [goodsId, userId, amount])
+    except Exception as err:
+        return jsonResponse(f"Не удалось добавить товар. Скорее всего он уже добавлен: {err.__repr__()}", HTTP_DATA_CONFLICT)
 
     insertHistory(
         userData['id'],

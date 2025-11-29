@@ -89,14 +89,18 @@ class Database:
             cur = self.db.cursor()
             cur.execute(request, values)
         except psycopg2.ProgrammingError as err:
-            if err.args[0] == 1146:
+            if not len(err.args):
+                print('Неизвестная ошибка')
+            elif err.args[0] == 1146:
                 print('Таблицы не существует')
             elif err.args[0] == 1064:
                 print('Неверный синтаксис запроса')
             print('\n/*/', request, '\n/*/', values, '\n/*/', err)
             raise err
         except psycopg2.OperationalError as err:
-            if err.args[0] == 1054:
+            if not len(err.args):
+                print('Неизвестная ошибка')
+            elif err.args[0] == 1054:
                 print('Столбец не найден')
             print('\n/*/', request, '\n/*/', values, '\n/*/', err)
             raise err

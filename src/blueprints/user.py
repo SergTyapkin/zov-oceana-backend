@@ -40,7 +40,7 @@ def check_tg_auth_hash(id, first_name, last_name, username, photo_url, auth_date
     )
 
 
-def new_session(resp, browser, osName, geolocation, ip):
+def new_session(resp: dict, browser: str, osName: str, geolocation: str, ip: str):
     token = str(uuid.uuid4())
     hoursAlive = 24 * 7  # 7 days
     session = DB.execute(SQLUser.insertSession, [resp['id'], token, hoursAlive, ip, browser, osName, geolocation])
@@ -48,47 +48,15 @@ def new_session(resp, browser, osName, geolocation, ip):
 
     DB.execute(SQLUser.deleteExpiredSessions)
 
+    resp.pop('password', None)
+
     res = jsonResponse(resp)
     res.set_cookie("session_token", token, expires=expires, httponly=True, samesite="lax")
     return res
 
 
-def authOrRegisterUserByUserData(userData, tgId, tgUsername, tgUserLastname, tgUserFirstname, tgPhotourl, clientBrowser,
-                                 clientOS):
-    if not userData or not userData['tel']:  # No user or not full data
-        if not userData:
-            # Register new user
-            try:
-                userData = DB.execute(SQLUser.insertUser,
-                                      [tgId, tgUsername, tgPhotourl, None, None, tgUserLastname, tgUserFirstname, None])
-            except:
-                return jsonResponse("Не удалось создать аккаунт без данных. Внутренняя ошибка", HTTP_INTERNAL_ERROR)
-        # not full data
-
-        insertHistory(
-            userData['id'],
-            'account',
-            f'Create partial account: @{tgUsername} #{tgId}, {tgUserFirstname} {tgUserLastname}, avatarUrl={tgPhotourl}'
-        )
-        return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
-
-    insertHistory(
-        userData['id'],
-        'account',
-        'Login existing account'
-    )
-
-    # Update tg user data to actual
-    if tgPhotourl is None:
-        DB.execute(SQLUser.updateUserTgDataWithoutAvatarUrlById, [str(tgId), tgUsername, userData['id']])
-    else:
-        DB.execute(SQLUser.updateUserTgDataById, [str(tgId), tgUsername, tgPhotourl, userData['id']])
-
-    return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
-
-
-@app.route("/auth", methods=["POST"])
-def userAuthOrRegister():
+@app.route("/auth/tg", methods=["POST"])
+def userAuthByTg():
     try:
         req = request.json
         tgId = req['tgId']
@@ -98,6 +66,7 @@ def userAuthOrRegister():
         tgPhotoUrl = req.get('tgPhotoUrl')
         tgFirstName = req.get('tgFirstName')
         tgLastName = req.get('tgLastName')
+
         clientBrowser = req.get('clientBrowser', 'Unknown browser')
         clientOS = req.get('clientOS', 'Unknown OS')
     except Exception as err:
@@ -106,15 +75,48 @@ def userAuthOrRegister():
     if not check_tg_auth_hash(tgId, tgFirstName, tgLastName, tgUsername, tgPhotoUrl, tgAuthDate, tgHash):
         return jsonResponse("Хэш авторизации TG не совпадает с данными", HTTP_INVALID_AUTH_DATA)
 
-    resp = DB.execute(SQLUser.selectUserByTgUsernameOrTgId, [tgUsername, str(tgId)])
-    return authOrRegisterUserByUserData(
-        resp, tgId, tgUsername, tgLastName, tgFirstName, tgPhotoUrl,
-        clientBrowser, clientOS
+    userData = DB.execute(SQLUser.selectUserByTgUsernameOrTgId, [tgUsername, str(tgId)])
+    if not userData:
+        return jsonResponse(f"Не удалось авторизоваться через TG. Аккаунт не найден", HTTP_NOT_FOUND)
+
+    insertHistory(
+        userData['id'],
+        'account',
+        'Login existing account'
     )
 
+    # Update tg user data to actual
+    if tgPhotoUrl is None:
+        DB.execute(SQLUser.updateUserTgDataWithoutAvatarUrlById, [str(tgId), tgUsername, userData['id']])
+    else:
+        DB.execute(SQLUser.updateUserTgDataById, [str(tgId), tgUsername, tgPhotoUrl, userData['id']])
+
+    return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
+
+
+@app.route("/auth", methods=["POST"])
+def userAuthByDefault():
+    try:
+        req = request.json
+        emailOrTel = req['emailOrTel']
+        password = req['password']
+
+        clientBrowser = req.get('clientBrowser', 'Unknown browser')
+        clientOS = req.get('clientOS', 'Unknown OS')
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    emailOrTel = emailOrTel.strip().lower()
+    password = hash_sha256(password)
+    userData = DB.execute(SQLUser.selectUserByEmailOrTelPassword, [emailOrTel, emailOrTel, password])
+
+    if not userData:
+        return jsonResponse("Неверные email или пароль", HTTP_INVALID_AUTH_DATA)
+
+    return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
 
 @app.route("/auth/code", methods=["POST"])
-def userAuthOrRegisterByCode():
+def userAuthByCodeTg():
     try:
         req = request.json
         secretCode = req['code']
@@ -128,13 +130,63 @@ def userAuthOrRegisterByCode():
         return jsonResponse("Неверный одноразовый код", HTTP_INVALID_AUTH_DATA)
     DB.execute(SQLUser.deleteSecretCodeByUseridCode, [resp['userid'], resp['code']])
 
-    tgUserData = json.loads(resp['meta'])
+    # tgUserData = json.loads(resp['meta'])
+    #
+    # resp = DB.execute(SQLUser.selectUserByTgUsernameOrTgId, [tgUserData['username'], str(tgUserData['id'])])
+    # if not resp:
+    #     return jsonResponse("Неверный ", HTTP_INVALID_AUTH_DATA)
 
-    resp = DB.execute(SQLUser.selectUserByTgUsernameOrTgId, [tgUserData['username'], str(tgUserData['id'])])
-    return authOrRegisterUserByUserData(
-        resp, tgUserData['id'], tgUserData['username'], tgUserData['last_name'], tgUserData['first_name'], None,
-        clientBrowser, clientOS
-    )
+    userData = DB.execute(SQLUser.selectUserById, [resp['userid']])
+    return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
+
+
+@app.route("", methods=["POST"])
+def userRegister():
+    try:
+        req = request.json
+        tgId = req.get('tgId')
+        tgUsername = req.get('tgUsername')
+        tgHash = req.get('tgHash')
+        tgAuthDate = req.get('tgAuthDate')
+        tgPhotoUrl = req.get('tgPhotoUrl')
+        tgFirstName = req.get('tgFirstName')
+        tgLastName = req.get('tgLastName')
+
+        givenName = req['givenName']
+        middleName = req['middleName']
+        familyName = req['familyName']
+        email = req['email']
+        tel = req['tel']
+        password = req['password']
+        clientBrowser = req.get('clientBrowser', 'Unknown browser')
+        clientOS = req.get('clientOS', 'Unknown OS')
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    email = email.strip().lower()
+    tel = tel.strip().lower().replace('+7', '8').replace('()-+', '')
+    password = hash_sha256(password)
+
+    if tgId is not None:
+        if not check_tg_auth_hash(tgId, tgFirstName, tgLastName, tgUsername, tgPhotoUrl, tgAuthDate, tgHash):
+            return jsonResponse("Хэш авторизации TG не совпадает с данными", HTTP_INVALID_AUTH_DATA)
+        resp = DB.execute(SQLUser.selectUserByEmailTelTgusernameTgid, [email, tel, tgUsername, tgId])
+    else:
+        tgId = None
+        tgUsername = None
+        resp = DB.execute(SQLUser.selectUserByEmailOrTel, [email, tel])
+
+    if resp:
+        return jsonResponse("Email или телефон уже заняты", HTTP_DATA_CONFLICT)
+
+    try:
+        print(SQLUser.insertUser, tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, password)
+        userData = DB.execute(SQLUser.insertUser,
+                              [tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, password])
+    except Exception as err:
+        return jsonResponse(f"Не удалось создать аккаунт. Внутренняя ошибка: {err.__repr__()}", HTTP_INTERNAL_ERROR)
+
+    return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
 
 
 @app.route("/session", methods=["DELETE"])
@@ -227,6 +279,8 @@ def userUpdate(userData):
         avatarUrl = req.get('avatarUrl')
         tel = req.get('tel')
 
+        isEmailNotificationsOn = req.get('isEmailNotificationsOn')
+
         tgUsername = req.get('tgUsername')
         tgId = req.get('tgId')
         canEditOrders = req.get('canEditOrders')
@@ -256,6 +310,7 @@ def userUpdate(userData):
     email = email or userData['email']
     avatarUrl = avatarUrl or userData['avatarurl']
     tel = tel or userData['tel']
+    isEmailNotificationsOn = isEmailNotificationsOn if 'isEmailNotificationsOn' in req else userData['tel']
     tgUsername = tgUsername or userData['tgusername']
     tgId = tgId or userData['tgid']
     canEditOrders = canEditOrders or userData['caneditorders']
@@ -268,14 +323,14 @@ def userUpdate(userData):
     try:
         if userData['caneditusers']:
             resp = DB.execute(SQLUser.adminUpdateUserById,
-                              [tgUsername, tgId, givenName, familyName, middleName, email, tel, avatarUrl,
+                              [tgUsername, tgId, givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl,
                                canEditOrders, canEditUsers, canEditGoods,
                                canEditHistory, canExecuteSQL, canEditGlobals, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
         else:
             resp = DB.execute(SQLUser.updateUserById,
-                              [givenName, familyName, middleName, email, tel, avatarUrl, userId])
+                              [givenName, familyName, middleName, email, tel,isEmailNotificationsOn, avatarUrl, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
     except:

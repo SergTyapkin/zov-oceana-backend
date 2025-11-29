@@ -27,7 +27,7 @@ def getOrder(userData):
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
     if order is None:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
-    if str(order['userid']) != str(userData['userid']) and not userData['caneditorders']:
+    if str(order['userid']) != str(userData['id']) and not userData['caneditorders']:
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
     print(order)
@@ -42,7 +42,7 @@ def getUserOrders(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if str(userId) != str(userData['userid']) and not userData['caneditorders']:
+    if str(userId) != str(userData['id']) and not userData['caneditorders']:
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
     orders = DB.execute(SQLOrders.selectUserOrdersByUserId, [userId], manyResults=True)
@@ -141,7 +141,7 @@ def updateOrderData(userData):
         return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 
     insertHistory(
-        userData['userid'],
+        userData['id'],
         'order',
         f'Update order: {orderData["number"]} #{orderData["id"]} {json.dumps(req)}'
     )

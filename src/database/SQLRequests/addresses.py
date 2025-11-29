@@ -19,7 +19,7 @@ def selectAddressByUserIdSearch(userId: str, search: str):
         f"LOWER(city) LIKE '%%{search.lower()}%%' OR " \
         f"LOWER(street) LIKE '%%{search.lower()}%%' OR " \
         f"LOWER(house) LIKE '%%{search.lower()}%%') " \
-        f"AND userId == '{userId}'" \
+        f"AND userId = '{userId}' " \
         "ORDER BY createdDate DESC"
 
 # ------------------

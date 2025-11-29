@@ -7,8 +7,8 @@ _userPublicColumns = "users.id, users.avatarUrl, users.givenName, users.familyNa
 
 # ----- INSERTS -----
 insertUser = \
-    "INSERT INTO users (tgId, tgUsername, avatarUrl, email, tel, familyName, givenName, middleName) " \
-    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO users (tgId, tgUsername, avatarUrl, email, tel, familyName, givenName, middleName, password) " \
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 insertSession = \
@@ -36,12 +36,30 @@ selectUserById = \
     "WHERE id = %s"
 
 selectAnotherUserById = \
-    "SELECT {_userPublicColumns} FROM users " \
+    f"SELECT {_userPublicColumns} FROM users " \
     "WHERE id = %s"
 
 selectUserByEmail = \
-    "SELECT {_userPublicColumns} FROM users " \
+    "SELECT * FROM users " \
     "WHERE email = %s"
+
+selectUserByEmailTelTgusernameTgid = \
+    "SELECT * FROM users " \
+    "WHERE email = %s " \
+    "OR tel = %s " \
+    "OR tgUsername = %s " \
+    "OR tgId = %s"
+
+selectUserByEmailOrTel = \
+    "SELECT * FROM users " \
+    "WHERE email = %s " \
+    "OR tel = %s"
+
+selectUserByEmailOrTelPassword = \
+    "SELECT * FROM users " \
+    "WHERE (email = %s " \
+    "OR tel = %s) " \
+    "AND password = %s"
 
 selectUserIdBySessionToken = \
     "SELECT userId, ip FROM sessions " \
@@ -107,6 +125,7 @@ updateUserById = \
     "middleName = %s, " \
     "email = %s, " \
     "tel = %s, " \
+    "isEmailNotificationsOn = %s, " \
     "avatarUrl = %s " \
     "WHERE id = %s " \
     "RETURNING *"
@@ -120,6 +139,7 @@ adminUpdateUserById = \
     "middleName = %s, " \
     "email = %s, " \
     "tel = %s, " \
+    "isEmailNotificationsOn = %s, " \
     "avatarUrl = %s, " \
     "canEditOrders = %s, " \
     "canEditUsers = %s, " \

@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import os
 from geoip2 import database
@@ -8,6 +9,9 @@ from flask_mail import Mail, Message
 
 from src.constants import HTTP_OK
 
+
+def hash_sha256(auth_string: str) -> str:
+    return hashlib.sha256(auth_string.encode()).hexdigest()
 
 def str_between(string: (str, bytes), start: (str, bytes), end: (str, bytes), replace_to: (str, bytes) = None):
     end_idx = start_idx = string.find(start) + len(start)

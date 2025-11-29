@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     givenName        TEXT DEFAULT NULL,
     middleName       TEXT DEFAULT NULL,
     joinedDate       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    password         TEXT NOT NULL,
 
     isEmailNotificationsOn  BOOLEAN DEFAULT TRUE,
 
@@ -134,7 +135,7 @@ CREATE TABLE IF NOT EXISTS ordersGoods (
 ------- Carts data -------
 CREATE TABLE IF NOT EXISTS goodsInCarts (
     id             SERIAL PRIMARY KEY,
-    goodsId        INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    goodsId        INT NOT NULL REFERENCES goods(id) ON DELETE CASCADE ON UPDATE CASCADE,
     userId         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
     addedDate      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     amount         FLOAT NOT NULL,

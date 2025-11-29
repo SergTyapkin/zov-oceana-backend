@@ -11,8 +11,21 @@ app = Blueprint('addresses', __name__)
 
 
 @app.route("")
+@login_and_can_edit_users_required
+def addressGet(userData):
+    try:
+        req = request.args
+        id = req['id']
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    addressData = DB.execute(SQLAddresses.selectAddressById, [id])
+    return jsonResponse(addressData)
+
+
+@app.route("/user")
 @login_required
-def addressesGet(userData):
+def addressesUserGet(userData):
     try:
         req = request.args
         userId = req['userId']
