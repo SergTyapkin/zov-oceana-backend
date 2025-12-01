@@ -4,6 +4,7 @@ import string
 from flask import Blueprint
 
 from src.TgBot.TgBot import TgBotMessageTexts, TgBot
+from src.blueprints.goods import prepareGoodsData
 from src.utils.access import *
 from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
@@ -14,6 +15,19 @@ from src.database.SQLRequests import goods as SQLGoods
 
 app = Blueprint('orders', __name__)
 
+
+def prepareOrder(orderData, addGoods = True, addAddress = True):
+    if addGoods:
+        orderGoods = DB.execute(SQLOrders.selectOrderGoodsByOrderId, [orderData['id']], manyResults=True)
+        for goods in orderGoods:
+            prepareGoodsData(goods, True, False)
+        orderData['goods'] = orderGoods
+    if addAddress:
+        if orderData['addressid']:
+            address = DB.execute(SQLAddresses.selectAddressById, [orderData['addressid']])
+            orderData['address'] = address or None
+        else:
+            orderData['address'] = None
 
 @app.route("", methods=["GET"])
 @login_required
@@ -30,7 +44,7 @@ def getOrder(userData):
     if str(order['userid']) != str(userData['id']) and not userData['caneditorders']:
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
-    print(order)
+    prepareOrder(order)
     return jsonResponse(order)
 
 @app.route("/user", methods=["GET"])
@@ -46,7 +60,8 @@ def getUserOrders(userData):
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
     orders = DB.execute(SQLOrders.selectUserOrdersByUserId, [userId], manyResults=True)
-    print(orders)
+    for order in orders:
+        prepareOrder(order, True, False)
 
     return jsonResponse({'orders': orders})
 
@@ -82,9 +97,19 @@ def createOrder(userData):
 
     symbols = string.digits
     randomSecretCode = ''.join(random.choice(symbols) for _ in range(ORDER_SECRET_CODE_GENERATE_LEN))
-    maxOrderNumber = DB.execute(SQLOrders.selectMaxOrderNumber, [])
-    maxOrderNumber = maxOrderNumber['maxnumber']
-    orderData = DB.execute(SQLOrders.insertOrder, [maxOrderNumber + 1, userId, addressId, randomSecretCode])
+    maxOrderId = DB.execute(SQLOrders.selectMaxOrderId, [])
+    maxOrderId = maxOrderId['maxid'] if maxOrderId and maxOrderId['maxid'] else 0
+    orderNumber = (maxOrderId + 1) * ORDER_NUMBER_SEED % MAX_ORDER_NUMBER
+    addressTextCopy = \
+        f"г. {address['city']}" + \
+        f", ул. {address['street']}" if address['street'] else '' + \
+        f", д. {address['house']}" if address['house'] else '' + \
+        f", п. {address['entrance']}" if address['entrance'] else '' + \
+        f", эт. {address['floor']}" if address['floor'] else '' + \
+        f", кв. {address['apartment']}" if address['apartment'] else '' + \
+        f", Код: {address['code']}" if address['code'] else ''
+    commentTextCopy = address['comment']
+    orderData = DB.execute(SQLOrders.insertOrder, [orderNumber, userId, addressId, addressTextCopy, commentTextCopy, randomSecretCode])
     if orderData is None:
         return jsonResponse("Не удалось создать заказ", HTTP_INTERNAL_ERROR)
 
@@ -122,6 +147,8 @@ def updateOrderData(userData):
         req = request.json
         id = req['id']
         addressId = req.get('addressId')
+        addressTextCopy = req.get('addressTextCopy')
+        commentTextCopy = req.get('commentTextCopy')
         status = req.get('status')
         trackingCode = req.get('trackingCode')
     except Exception as err:
@@ -132,11 +159,13 @@ def updateOrderData(userData):
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
 
     if addressId is None: addressId = orderData['addressid']
+    if addressTextCopy is None: addressTextCopy = orderData['addresstextcopy']
+    if commentTextCopy is None: commentTextCopy = orderData['commenttextcopy']
     if status is None: status = orderData['status']
     if trackingCode is None: trackingCode = orderData['trackingcode']
 
     try:
-        response = DB.execute(SQLOrders.updateOrderById, [addressId, status, trackingCode, id])
+        response = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
     except Exception as err:
         return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 

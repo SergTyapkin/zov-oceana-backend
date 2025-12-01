@@ -26,7 +26,7 @@ def cartsGet(userData):
     # get all goods in cart list
     goods = DB.execute(SQLCarts.selectGoodsInCartByUserId, [userId], manyResults=True)
     for goodsOne in goods:
-        prepareGoodsData(goodsOne, False, False)
+        prepareGoodsData(goodsOne, True, False)
 
     return jsonResponse({"goods": goods})
 

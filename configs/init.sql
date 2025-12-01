@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS images (
 ------ Addresses data ------
 CREATE TABLE IF NOT EXISTS addresses (
     id             SERIAL PRIMARY KEY,
-    userId         INT NOT NULL REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    userId         INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     createdDate    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     title          TEXT DEFAULT NULL,
     city           TEXT DEFAULT NULL,
@@ -118,8 +118,10 @@ CREATE TABLE IF NOT EXISTS orders (
     id              SERIAL PRIMARY KEY,
     number          INT NOT NULL UNIQUE,
     secretCode      TEXT NOT NULL,
-    userId          INT NOT NULL REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    addressId       INT NOT NULL REFERENCES addresses(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    userId          INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    addressId       INT REFERENCES addresses(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    addressTextCopy TEXT NOT NULL,
+    commentTextCopy TEXT NOT NULL,
     createdDate     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updatedDate     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     status          orderStatus NOT NULL DEFAULT 'created',
@@ -127,8 +129,8 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE TABLE IF NOT EXISTS ordersGoods (
     id              SERIAL PRIMARY KEY,
-    orderId         INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    goodsId         INT NOT NULL REFERENCES goods(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    orderId         INT REFERENCES orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    goodsId         INT REFERENCES goods(id) ON DELETE SET NULL ON UPDATE CASCADE,
     cost            FLOAT NOT NULL,
     amount          FLOAT NOT NULL,
     UNIQUE (goodsId, orderId)

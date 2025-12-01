@@ -68,7 +68,7 @@ class TgBotClass:
             @errorsHandling
             def startHandler(message):
                 deepLinkText = message.text.split()[1] if len(message.text.split()) > 1 else None
-                print(f"TgBot get start command from #{message.from_user.id}, text: \"{message.text}\". Response with default text")
+                print(f"[TgBot] Got start command from #{message.from_user.id}, text: \"{message.text}\". Response with default text")
                 if deepLinkText == 'auth_by_code':  # Generate enter by code auth link
                     secretCode = createSecretCode(message.from_user.id, "auth", json.dumps({
                         'id': message.from_user.id,
@@ -76,7 +76,7 @@ class TgBotClass:
                         'last_name': message.from_user.last_name,
                         'username': message.from_user.username,
                     }))
-                    print(f"TgBot generates auth by code. Code = {secretCode}")
+                    print(f"[TgBot] generates auth by code. Code = {secretCode}")
                     markup = telebot.types.InlineKeyboardMarkup()
                     btnEnter = telebot.types.InlineKeyboardButton(
                         text='Войти на сайте',
@@ -99,7 +99,7 @@ class TgBotClass:
             @self.bot.message_handler()
             @errorsHandling
             def anyMessageHandler(message):
-                print(f"TgBot get message from #{message.from_user.id}:", message.text, ". Response with default text")
+                print(f"[TgBot] Got message from #{message.from_user.id}:", message.text, ". Response with default text")
                 self.bot.send_message(
                     message.from_user.id,
                     "❗ Бот не принимает сообщения, а только уведомляет о действиях и заказах на сайте",
@@ -118,7 +118,7 @@ class TgBotClass:
             print("[TgBot] TgBot not enabled in config")
             return
         message = MessageText % values
-        print(f"[TgBot] send message to #{userTgId}:", message)
+        print(f"[TgBot] Send message to #{userTgId}:", message)
         self.bot.send_message(userTgId, message, parse_mode='MarkdownV2')
 
     def startBotPolling(self):

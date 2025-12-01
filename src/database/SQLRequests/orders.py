@@ -1,6 +1,6 @@
 insertOrder = \
-    "INSERT INTO orders (number, userId, addressId, secretCode) " \
-    "VALUES (%s, %s, %s, %s) " \
+    "INSERT INTO orders (number, userId, addressId, addressTextCopy, commentTextCopy, secretCode) " \
+    "VALUES (%s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 insertOrderGoods = \
@@ -11,32 +11,29 @@ insertOrderGoods = \
 # ------------------
 
 selectOrderById = \
-    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.amount orderGoodsAmount, goods.title as goodsTitle, goods.isOnSale as goodsIsOnSale FROM orders " \
-    "JOIN ordersGoods ON orders.id = ordersGoods.orderId " \
-    "JOIN goods ON ordersGoods.goodsId = goods.id " \
-    "WHERE orders.id = %s"
-
-selectOrdersByGoodsId = \
-    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.amount orderGoodsAmount, goods.title as goodsTitle, goods.isOnSale as goodsIsOnSale FROM orders " \
-    "JOIN ordersGoods ON orders.id = ordersGoods.orderId " \
-    "JOIN goods ON ordersGoods.goodsId = goods.id " \
-    "WHERE goods.id = %s"
+    "SELECT * FROM orders " \
+    "WHERE id = %s"
 
 selectUserOrdersByUserId = \
-    "SELECT orders.*, ordersGoods.cost as orderGoodsCost, ordersGoods.amount orderGoodsAmount, goods.title as goodsTitle, goods.isOnSale as goodsIsOnSale FROM orders " \
-    "JOIN ordersGoods ON orders.id = ordersGoods.orderId " \
-    "JOIN goods ON ordersGoods.goodsId = goods.id " \
-    "WHERE orders.id = %s"
+    "SELECT * FROM orders " \
+    "WHERE userId = %s"
 
-selectMaxOrderNumber = \
-    "SELECT MAX(number) as maxNumber " \
+selectMaxOrderId = \
+    "SELECT MAX(id) as maxId " \
     "FROM orders"
+
+selectOrderGoodsByOrderId = \
+    "SELECT * FROM ordersGoods " \
+    "JOIN goods ON ordersGoods.goodsId = goods.id " \
+    "WHERE orderId = %s"
 
 # ------------------
 
 updateOrderById = \
     "UPDATE orders " \
     "SET addressId = %s, " \
+    "addressTextCopy = %s, " \
+    "commentTextCopy = %s, " \
     "updatedDate = NOW(), " \
     "status = %s, " \
     "trackingCode = %s " \
