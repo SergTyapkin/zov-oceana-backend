@@ -13,10 +13,12 @@ selectGoodsInCartById = \
 
 selectGoodsInCartByUserId = \
     "SELECT * FROM goodsInCarts " \
+    "JOIN goods ON goods.id = goodsInCarts.goodsId " \
     "WHERE userId = %s"
 
 selectGoodsInCartByUserIdGoodsId = \
     "SELECT * FROM goodsInCarts " \
+    "JOIN goods ON goods.id = goodsInCarts.goodsId " \
     "WHERE userId = %s " \
     "AND goodsId = %s "
 
@@ -40,4 +42,8 @@ deleteGoodsInCartsByUserIdGoodsId = \
     "DELETE FROM goodsInCarts " \
     "WHERE userId = %s " \
     "AND goodsId = %s"
+
+deleteAllGoodsInCartsByUserId = \
+    "DELETE FROM goodsInCarts " \
+    "WHERE userId = %s"
 

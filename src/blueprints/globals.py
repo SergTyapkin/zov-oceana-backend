@@ -2,12 +2,15 @@ import json
 
 from flask import Blueprint
 
+from src.blueprints.goods import prepareGoodsData
 from src.utils.access import *
 from src.constants import *
 from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
 
 from src.database.SQLRequests import globals as SQLGlobals
+from src.database.SQLRequests import goods as SQLGoods
+from src.database.SQLRequests import categories as SQLCategories
 
 app = Blueprint('globals', __name__)
 
@@ -33,4 +36,25 @@ def globalsUpdate(userData):
         f'Set globals: {json.dumps(req)}'
     )
     return jsonResponse(resp)
+
+@app.route("")
+def getGlobals():
+    try:
+        req = request.args
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    globalsData = DB.execute(SQLGlobals.selectGlobals)
+
+    # Add goods on landing data
+    goodsData = DB.execute(SQLGoods.selectGoodsByIds(globalsData['goodsidsonlanding']), [], manyResults=True)
+    categoriesData = DB.execute(SQLCategories.selectCategoriesAll, [], manyResults=True)
+
+    for goodsOne in goodsData:
+        prepareGoodsData(goodsOne, True, False)
+
+    globalsData['goodsonlanding'] = goodsData
+    globalsData['categories'] = categoriesData
+
+    return jsonResponse(globalsData)
 

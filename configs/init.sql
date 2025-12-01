@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS addresses (
     street         TEXT DEFAULT NULL,
     house          TEXT DEFAULT NULL,
     entrance       TEXT DEFAULT NULL,
+    apartment          TEXT DEFAULT NULL,
+    floor          TEXT DEFAULT NULL,
     code           TEXT DEFAULT NULL,
     comment        TEXT DEFAULT NULL
 );
@@ -154,5 +156,6 @@ CREATE TABLE IF NOT EXISTS history (
 
 ------ Globals ------
 CREATE TABLE IF NOT EXISTS globals (
-    isOnMaintenance BOOLEAN NOT NULL DEFAULT FALSE
+    isOnMaintenance   BOOLEAN NOT NULL DEFAULT FALSE,
+    goodsIdsOnLanding INT[] NOT NULL DEFAULT ARRAY[]::INT[]
 );

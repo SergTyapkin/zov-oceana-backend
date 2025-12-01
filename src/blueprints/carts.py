@@ -1,5 +1,6 @@
 from flask import Blueprint
 
+from src.blueprints.goods import prepareGoodsData
 from src.utils.access import *
 from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
@@ -24,6 +25,9 @@ def cartsGet(userData):
 
     # get all goods in cart list
     goods = DB.execute(SQLCarts.selectGoodsInCartByUserId, [userId], manyResults=True)
+    for goodsOne in goods:
+        prepareGoodsData(goodsOne, False, False)
+
     return jsonResponse({"goods": goods})
 
 
@@ -53,6 +57,43 @@ def addGoodsToCart(userData):
     )
 
     return jsonResponse(cart)
+
+@app.route("/goods/set", methods=["POST"])
+@login_required
+def setGoodsInCart(userData):
+    try:
+        req = request.json
+        userId = req['userId']
+        goods = req['goods']
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    try:
+        for goodsOne in goods:
+            if \
+                'id' not in goodsOne or \
+                'amount' not in goodsOne:
+                return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
+        return jsonResponse('Нет прав добавлять товары в корзину другого пользователя', HTTP_NO_PERMISSIONS)
+
+    DB.execute(SQLCarts.deleteAllGoodsInCartsByUserId, [userId])
+    for goodsOne in goods:
+        try:
+            DB.execute(SQLCarts.insertGoodsInCart, [goodsOne['id'], userId, goodsOne['amount']])
+        except Exception as err:
+            print(f"(Warning) Не удалось добавить товар. Скорее всего он уже добавлен: {err.__repr__()}")
+
+    insertHistory(
+        userData['id'],
+        'cart',
+        f'Set all goods in cart: User: #{userId}, Goods: {goods}'
+    )
+
+    return jsonResponse("Корзина перезаписана")
 
 
 @app.route("/goods", methods=["PUT"])

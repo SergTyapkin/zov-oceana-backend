@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 
 from flask import Blueprint
@@ -164,7 +165,7 @@ def userRegister():
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
     email = email.strip().lower()
-    tel = tel.strip().lower().replace('+7', '8').replace('()-+', '')
+    tel = re.sub('^8', '+7', tel.strip().lower()).replace('(', '').replace(')', '').replace('-', '')
     password = hash_sha256(password)
 
     if tgId is not None:
@@ -246,14 +247,9 @@ def userGet(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    def addGlobals(userData):
-        globals = DB.execute(SQLGlobals.selectGlobals)
-        userData['isonmaintenance'] = globals['isonmaintenance']
-
     if userId is None:  # return self user data
         if userData is None:
             return jsonResponse("Не авторизован", HTTP_INVALID_AUTH_DATA)
-        addGlobals(userData)
         return jsonResponse(userData)
 
     # get another user data
@@ -310,7 +306,7 @@ def userUpdate(userData):
     email = email or userData['email']
     avatarUrl = avatarUrl or userData['avatarurl']
     tel = tel or userData['tel']
-    isEmailNotificationsOn = isEmailNotificationsOn if 'isEmailNotificationsOn' in req else userData['tel']
+    isEmailNotificationsOn = isEmailNotificationsOn if 'isEmailNotificationsOn' in req else userData['isemailnotificationson']
     tgUsername = tgUsername or userData['tgusername']
     tgId = tgId or userData['tgid']
     canEditOrders = canEditOrders or userData['caneditorders']
@@ -319,6 +315,9 @@ def userUpdate(userData):
     canEditHistory = canEditHistory or userData['canedithistory']
     canExecuteSQL = canExecuteSQL or userData['canexecutesql']
     canEditGlobals = canEditGlobals or userData['caneditglobals']
+
+    email = email.strip().lower()
+    tel = re.sub('^8', '+7', tel.strip().lower()).replace('(', '').replace(')', '').replace('-', '')
 
     try:
         if userData['caneditusers']:
@@ -330,10 +329,11 @@ def userUpdate(userData):
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
         else:
             resp = DB.execute(SQLUser.updateUserById,
-                              [givenName, familyName, middleName, email, tel,isEmailNotificationsOn, avatarUrl, userId])
+                              [givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
-    except:
+    except Exception as err:
+        print(err)
         return jsonResponse("Имя пользователя или email заняты", HTTP_DATA_CONFLICT)
 
     insertHistory(
@@ -422,3 +422,29 @@ def userConfirmEmail():
         f'Email confirmed'
     )
     return jsonResponse("Адрес email подтвержден")
+
+@app.route("/password", methods=["PUT"])
+@login_required_return_id
+def userUpdatePassword(userId):
+    try:
+        req = request.json
+        oldPassword = req['oldPassword']
+        newPassword = req['newPassword']
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+    oldPassword = hash_sha256(oldPassword)
+    newPassword = hash_sha256(newPassword)
+
+    resp = DB.execute(SQLUser.selectUserByUserIdPassword, [userId, oldPassword])
+    if not resp:
+        return jsonResponse("Неверный старый пароль", HTTP_INVALID_AUTH_DATA)
+
+    DB.execute(SQLUser.updateUserPasswordById, [newPassword, userId])
+
+    insertHistory(
+        resp['id'],
+        'account',
+        f'Password changed'
+    )
+    return jsonResponse("Пароль изменен")

@@ -1,6 +1,6 @@
 insertAddress = \
-    "INSERT INTO addresses (userId, title, city, street, house, entrance, code, comment) " \
-    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO addresses (userId, title, city, street, house, entrance, floor, apartment, code, comment) " \
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 # ------------------
@@ -31,6 +31,8 @@ updateAddressById = \
     "street = %s, " \
     "house = %s, " \
     "entrance = %s, " \
+    "floor = %s, " \
+    "apartment = %s, " \
     "code = %s, " \
     "comment = %s " \
     "WHERE id = %s " \

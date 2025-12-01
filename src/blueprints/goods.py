@@ -12,6 +12,20 @@ from src.database.SQLRequests import images as SQLImages
 app = Blueprint('goods', __name__)
 
 
+def prepareGoodsData(goodsData, addImages = True, addCategories = True):
+    if addImages:
+        imagesData = DB.execute(SQLImages.selectGoodsImagesByGoodsId, [goodsData['id']], manyResults=True)
+        goodsData['images'] = imagesData
+    if addCategories:
+        categoriesData = DB.execute(SQLGoods.selectCategoriesByGoodsId, [goodsData['id']], manyResults=True)
+        goodsData['categories'] = categoriesData
+
+    try:
+        goodsData['characters'] = json.loads(goodsData['characters'])
+    except:
+        goodsData['characters'] = None
+
+
 @app.route("")
 def goodsGet():
     try:
@@ -21,14 +35,8 @@ def goodsGet():
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
     goodsData = DB.execute(SQLGoods.selectGoodsById, [id])
-    categoriesData = DB.execute(SQLGoods.selectCategoriesByGoodsId, [id], manyResults=True)
-    imagesData = DB.execute(SQLImages.selectGoodsImagesByGoodsId, [id], manyResults=True)
-    goodsData['categories'] = categoriesData
-    goodsData['images'] = imagesData
-    try:
-        goodsData['characters'] = json.loads(goodsData['characters'])
-    except:
-        goodsData['characters'] = None
+    prepareGoodsData(goodsData)
+
     return jsonResponse(goodsData)
 
 @app.route("/all")
@@ -49,14 +57,7 @@ def goodsGetAll():
 
     goods = DB.execute(SQLGoods.selectGoods(req), [], manyResults=True)
     for goodsOne in goods:
-        categoriesData = DB.execute(SQLGoods.selectCategoriesByGoodsId, [goodsOne['id']], manyResults=True)
-        imagesData = DB.execute(SQLImages.selectGoodsImagesByGoodsId, [goodsOne['id']], manyResults=True)
-        goodsOne['categories'] = categoriesData
-        goodsOne['images'] = imagesData
-        try:
-            goodsOne['characters'] = json.loads(goodsOne['characters'])
-        except:
-            goodsOne['characters'] = None
+        prepareGoodsData(goodsOne)
     return jsonResponse({'goods': goods})
 
 

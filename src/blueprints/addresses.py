@@ -48,21 +48,23 @@ def addressesUserGet(userData):
 def addressCreate(userData):
     try:
         req = request.json
+        userId = req['userId']
         title = req['title']
         city = req.get('city')
         street = req.get('street')
         house = req.get('house')
         entrance = req.get('entrance')
+        floor = req.get('floor')
+        apartment = req.get('apartment')
         code = req.get('code')
         comment = req.get('comment')
-        userId = req['userId']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать адреса другого пользователя', HTTP_NO_PERMISSIONS)
 
-    address = DB.execute(SQLAddresses.insertAddress, [userId, title, city, street, house, entrance, code, comment])
+    address = DB.execute(SQLAddresses.insertAddress, [userId, title, city, street, house, entrance, floor, apartment, code, comment])
 
     insertHistory(
         userData['id'],
@@ -84,6 +86,8 @@ def addressUpdate(userData):
         street = req.get('street')
         house = req.get('house')
         entrance = req.get('entrance')
+        floor = req.get('floor')
+        apartment = req.get('apartment')
         code = req.get('code')
         comment = req.get('comment')
     except Exception as err:
@@ -101,10 +105,12 @@ def addressUpdate(userData):
     if street is None: street = addressData['street']
     if house is None: house = addressData['house']
     if entrance is None: entrance = addressData['entrance']
+    if floor is None: floor = addressData['floor']
+    if apartment is None: apartment = addressData['apartment']
     if code is None: code = addressData['code']
     if comment is None: comment = addressData['comment']
 
-    address = DB.execute(SQLAddresses.updateAddressById, [title, city, street, house, entrance, code, comment])
+    address = DB.execute(SQLAddresses.updateAddressById, [title, city, street, house, entrance, floor, apartment, code, comment, id])
 
     insertHistory(
         userData['id'],

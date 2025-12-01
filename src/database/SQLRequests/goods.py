@@ -36,6 +36,11 @@ def selectGoods(filters):
             "ORDER BY goods.title " + \
             (f"LIMIT {limit} " if limit is not None else "")
 
+def selectGoodsByIds(goodsIds):
+    return \
+        "SELECT * FROM goods " \
+        "WHERE id IN ('" + "','".join(map(str, goodsIds)) + "')"
+
 selectGoodsById = \
     "SELECT * FROM goods " \
     "WHERE id = %s "

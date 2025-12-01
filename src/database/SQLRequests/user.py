@@ -39,6 +39,11 @@ selectAnotherUserById = \
     f"SELECT {_userPublicColumns} FROM users " \
     "WHERE id = %s"
 
+selectUserByUserIdPassword = \
+    f"SELECT * FROM users " \
+    "WHERE id = %s " \
+    "AND password = %s"
+
 selectUserByEmail = \
     "SELECT * FROM users " \
     "WHERE email = %s"
@@ -162,6 +167,12 @@ updateUserConfirmationBySecretcodeType = \
 updateUserRevokeEmailConfirmationByUserId = \
     "UPDATE users " \
     "SET isConfirmedEmail = False " \
+    "WHERE id = %s " \
+    "RETURNING *"
+
+updateUserPasswordById = \
+    "UPDATE users " \
+    "SET password = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 
