@@ -22,7 +22,7 @@
 echo "Now we generate new SSH key with name \"${key_name}\" and adds it into ~/.ssh/authorized_keys to access github actions on this computer" &&
 echo '[press Enter...]' &&
 read ENTER &&
-key_name="$(. "./.env"; eval "echo \${VITE_DEPLOY_HOSTNAME}" | tr -dc "a-zA-Z0-9_.-")" &&
+key_name="$(. "./.env"; eval "echo \${APP_CONTAINER_NAME}" | tr -dc "a-zA-Z0-9_.-")" &&
 ssh-keygen -f "/tmp/${key_name}" &&
 sudo mkdir -p ~/.ssh &&
 sudo cat "/tmp/${key_name}.pub" | sudo tee -a ~/.ssh/authorized_keys > /dev/null &&
