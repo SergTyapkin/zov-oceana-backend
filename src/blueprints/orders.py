@@ -102,12 +102,12 @@ def createOrder(userData):
     orderNumber = (maxOrderId + 1) * ORDER_NUMBER_SEED % MAX_ORDER_NUMBER
     addressTextCopy = \
         f"г. {address['city']}" + \
-        f", ул. {address['street']}" if address['street'] else '' + \
-        f", д. {address['house']}" if address['house'] else '' + \
-        f", п. {address['entrance']}" if address['entrance'] else '' + \
-        f", эт. {address['floor']}" if address['floor'] else '' + \
-        f", кв. {address['apartment']}" if address['apartment'] else '' + \
-        f", Код: {address['code']}" if address['code'] else ''
+        (f", ул. {address['street']}" if address['street'] else '') + \
+        (f", д. {address['house']}" if address['house'] else '') + \
+        (f", п. {address['entrance']}" if address['entrance'] else '') + \
+        (f", эт. {address['floor']}" if address['floor'] else '') + \
+        (f", кв. {address['apartment']}" if address['apartment'] else '') + \
+        (f", Код: {address['code']}" if address['code'] else '')
     commentTextCopy = address['comment']
     orderData = DB.execute(SQLOrders.insertOrder, [orderNumber, userId, addressId, addressTextCopy, commentTextCopy, randomSecretCode])
     if orderData is None:
