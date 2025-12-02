@@ -1,13 +1,13 @@
 name: Dev CI
 
-# on:
-#   push:
-#     branches: ['dev']
+on:
+  push:
+    branches: ['develop']
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: deploy
+    environment: develop
     steps:
       - name: Checkout
         uses: actions/checkout@master
@@ -20,5 +20,5 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SSH_DEPLOY_KEY }}
           script: |
-            cd ${{ vars.DEV_PROJECT_PATH }} &&
+            cd ${{ vars.PROJECT_PATH }} &&
             make update

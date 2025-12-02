@@ -33,7 +33,7 @@ def check_tg_auth_hash(id, first_name, last_name, username, photo_url, auth_date
     secret_key = hashlib.sha256(config["tg_bot_token"].encode('utf-8')).digest()
     expected_hash = hmac.new(secret_key, bytes(data_check_string, 'utf-8'), hashlib.sha256).hexdigest()
 
-    authTime = datetime.datetime.fromtimestamp(auth_date)
+    authTime = datetime.datetime.fromtimestamp(int(auth_date))
     currentTime = datetime.datetime.now()
     return (
             (currentTime - authTime).total_seconds() < 60 * float(config["allow_tg_auth_period_min"]) and
