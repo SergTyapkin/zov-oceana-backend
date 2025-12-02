@@ -47,7 +47,10 @@ def getGlobals():
     globalsData = DB.execute(SQLGlobals.selectGlobals)
 
     # Add goods on landing data
-    goodsData = DB.execute(SQLGoods.selectGoodsByIds(globalsData['goodsidsonlanding']), [], manyResults=True)
+    if len(globalsData['goodsidsonlanding']):
+        goodsData = DB.execute(SQLGoods.selectGoodsByIds(globalsData['goodsidsonlanding']), [], manyResults=True)
+    else:
+        goodsData = []
     categoriesData = DB.execute(SQLCategories.selectCategoriesAll, [], manyResults=True)
 
     for goodsOne in goodsData:
