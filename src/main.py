@@ -16,6 +16,7 @@ from src.blueprints.image import app as image_app
 from src.blueprints.addresses import app as addresses_app
 from src.blueprints.orders import app as orders_app
 from src.blueprints.carts import app as cart_app
+from src.blueprints.partners import app as partners_app
 from src.blueprints.globals import app as globals_app
 from src.connections import config, DB
 from src.constants import HTTP_NOT_FOUND, HTTP_INTERNAL_ERROR, MAX_LOG_DATA_LENGTH
@@ -37,6 +38,7 @@ app.register_blueprint(image_app, url_prefix='/image')
 app.register_blueprint(addresses_app, url_prefix='/addresses')
 app.register_blueprint(orders_app, url_prefix='/orders')
 app.register_blueprint(cart_app, url_prefix='/cart')
+app.register_blueprint(partners_app, url_prefix='/partner')
 app.register_blueprint(globals_app, url_prefix='/globals')
 
 app.config['MAIL_SERVER'] = config['SMTP_mail_server_host']

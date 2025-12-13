@@ -12,12 +12,16 @@ CREATE TABLE IF NOT EXISTS users (
     middleName       TEXT DEFAULT NULL,
     joinedDate       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     password         TEXT NOT NULL,
+    partnerStatus    BOOLEAN DEFAULT FALSE,
+    referrerId        INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    partnerBonuses   FLOAT NOT NULL DEFAULT 0,
 
     isEmailNotificationsOn  BOOLEAN DEFAULT TRUE,
 
     canEditOrders           BOOLEAN DEFAULT FALSE,
     canEditUsers            BOOLEAN DEFAULT FALSE,
     canEditGoods            BOOLEAN DEFAULT FALSE,
+    canEditPartners         BOOLEAN DEFAULT FALSE,
     canExecuteSQL           BOOLEAN DEFAULT FALSE,
     canEditHistory          BOOLEAN DEFAULT FALSE,
     canEditGlobals          BOOLEAN DEFAULT FALSE
@@ -146,6 +150,16 @@ CREATE TABLE IF NOT EXISTS goodsInCarts (
     UNIQUE (goodsId, userId)
 );
 
+
+------ Partner bonuses history ------
+CREATE TABLE IF NOT EXISTS partnerBonusesHistory (
+    id             SERIAL PRIMARY KEY,
+    userId         INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    value          FLOAT NOT NULL,
+    orderId        INT REFERENCES orders(id) ON DELETE SET NULL ON UPDATE CASCADE DEFAULT NULL,
+    date           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    comment        TEXT
+);
 
 ------ Total history ------
 CREATE TABLE IF NOT EXISTS history (

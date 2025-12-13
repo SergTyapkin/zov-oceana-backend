@@ -5,6 +5,7 @@ from flask import Blueprint
 
 from src.TgBot.TgBot import TgBotMessageTexts, TgBot
 from src.blueprints.goods import prepareGoodsData
+from src.blueprints.partners import addBonusesToReferrersByOrderData
 from src.utils.access import *
 from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
@@ -165,7 +166,7 @@ def updateOrderData(userData):
     if trackingCode is None: trackingCode = orderData['trackingcode']
 
     try:
-        response = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
+        updatedOrderData = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
     except Exception as err:
         return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 
@@ -175,25 +176,30 @@ def updateOrderData(userData):
         f'Update order: {orderData["number"]} #{orderData["id"]} {json.dumps(req)}'
     )
 
-    try:
-        fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
-        messageText = "Статус заказа изменён на какой-то другой (???)"
-        if status == OrderStatuses.created:
-            messageText = TgBotMessageTexts.orderStatusToCreated
-        elif status == OrderStatuses.paid:
-            messageText = TgBotMessageTexts.orderStatusToPaid
-        elif status == OrderStatuses.prepared:
-            messageText = TgBotMessageTexts.orderStatusToPrepared
-        elif status == OrderStatuses.delivered:
-            messageText = TgBotMessageTexts.orderStatusToDelivered
-        elif status == OrderStatuses.cancelled:
-            messageText = TgBotMessageTexts.orderStatusToCancelled
-        TgBot.sendMessage(fullUserData['tgid'], messageText, orderData["number"])
-    except Exception as err:
-        print("Error. Cannot select user and send message by tg bot", err)
-        pass
 
-    return jsonResponse(response)
+    if orderData['status'] != status: # if status is changed
+        if status == OrderStatuses.paid:
+            addBonusesToReferrersByOrderData(updatedOrderData)
+
+        try: # send TgBot notification
+            fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
+            messageText = "Статус заказа изменён на какой-то другой (???)"
+            if status == OrderStatuses.created:
+                messageText = TgBotMessageTexts.orderStatusToCreated
+            elif status == OrderStatuses.paid:
+                messageText = TgBotMessageTexts.orderStatusToPaid
+            elif status == OrderStatuses.prepared:
+                messageText = TgBotMessageTexts.orderStatusToPrepared
+            elif status == OrderStatuses.delivered:
+                messageText = TgBotMessageTexts.orderStatusToDelivered
+            elif status == OrderStatuses.cancelled:
+                messageText = TgBotMessageTexts.orderStatusToCancelled
+            TgBot.sendMessage(fullUserData['tgid'], messageText, orderData["number"])
+        except Exception as err:
+            print("Error. Cannot select user and send message by tg bot", err)
+            pass
+
+    return jsonResponse(updatedOrderData)
 
 
 @app.route("", methods=["DELETE"])

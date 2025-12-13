@@ -90,6 +90,12 @@ def login_and_can_edit_goods_required(f):
         (userData, res) = __login_and_property_required('caneditgoods', "Нет прав на изменение товаров")
         return res or f(*args, userData, **kwargs)
     return wrapper
+def login_and_can_edit_partners_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        (userData, res) = __login_and_property_required('caneditpartners', "Нет прав на изменение партнеров и рефералов")
+        return res or f(*args, userData, **kwargs)
+    return wrapper
 def login_and_can_execute_sql_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):

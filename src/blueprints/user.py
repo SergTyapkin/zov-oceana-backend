@@ -274,6 +274,7 @@ def userUpdate(userData):
         email = req.get('email')
         avatarUrl = req.get('avatarUrl')
         tel = req.get('tel')
+        partnerStatus = req.get('partnerStatus')
 
         isEmailNotificationsOn = req.get('isEmailNotificationsOn')
 
@@ -315,6 +316,7 @@ def userUpdate(userData):
     canEditHistory = canEditHistory or userData['canedithistory']
     canExecuteSQL = canExecuteSQL or userData['canexecutesql']
     canEditGlobals = canEditGlobals or userData['caneditglobals']
+    partnerStatus = partnerStatus if 'partnerStatus' in req else userData['partnerstatus']
 
     email = email.strip().lower()
     tel = re.sub('^8', '+7', tel.strip().lower()).replace('(', '').replace(')', '').replace('-', '')
@@ -324,12 +326,14 @@ def userUpdate(userData):
             resp = DB.execute(SQLUser.adminUpdateUserById,
                               [tgUsername, tgId, givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl,
                                canEditOrders, canEditUsers, canEditGoods,
-                               canEditHistory, canExecuteSQL, canEditGlobals, userId])
+                               canEditHistory, canExecuteSQL, canEditGlobals, partnerStatus, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
         else:
+            if partnerStatus is True:
+                partnerStatus = userData['partnerStatus']
             resp = DB.execute(SQLUser.updateUserById,
-                              [givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, userId])
+                              [givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, partnerStatus, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
     except Exception as err:

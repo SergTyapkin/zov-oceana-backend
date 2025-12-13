@@ -3,7 +3,7 @@
 # -----------------------
 import json
 
-_userPublicColumns = "users.id, users.avatarUrl, users.givenName, users.familyName, users.joinedDate"
+userPublicColumns = "users.id, users.avatarUrl, users.givenName, users.familyName, users.joinedDate"
 
 # ----- INSERTS -----
 insertUser = \
@@ -35,8 +35,16 @@ selectUserById = \
     "SELECT * FROM users " \
     "WHERE id = %s"
 
+selectUserReferrerById = \
+    "SELECT * FROM users " \
+    "WHERE id = (" \
+        "SELECT referrerId " \
+        "FROM users " \
+        "WHERE id = %s " \
+    ")"
+
 selectAnotherUserById = \
-    f"SELECT {_userPublicColumns} FROM users " \
+    f"SELECT {userPublicColumns} FROM users " \
     "WHERE id = %s"
 
 selectUserByUserIdPassword = \
@@ -89,7 +97,7 @@ def selectUsersByFilters(filters):
     ordering = json.loads(filters.get('ordering')) if filters.get('ordering') else []
 
     return \
-            f"SELECT {_userPublicColumns} FROM users " \
+            f"SELECT {userPublicColumns} FROM users " \
             "WHERE " + \
             (f"LOWER(familyName || ' ' || givenName ' ' || middleName || ' ' || id) LIKE '%%{search}%%' AND " if 'search' in filters else "") + \
             "1 = 1 " \
@@ -123,6 +131,12 @@ updateUserTgDataWithoutAvatarUrlById = \
     "WHERE id = %s " \
     "RETURNING *"
 
+updateUserAddPartnerBonusesById = \
+    "UPDATE users SET " \
+    "partnerBonuses = partnerBonuses + %s " \
+    "WHERE id = %s " \
+    "RETURNING *"
+
 updateUserById = \
     "UPDATE users SET " \
     "givenName = %s, " \
@@ -131,7 +145,8 @@ updateUserById = \
     "email = %s, " \
     "tel = %s, " \
     "isEmailNotificationsOn = %s, " \
-    "avatarUrl = %s " \
+    "avatarUrl = %s, " \
+    "partnerStatus = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 
@@ -151,7 +166,8 @@ adminUpdateUserById = \
     "canEditGoods = %s, " \
     "canEditHistory = %s, " \
     "canExecuteSQL = %s, " \
-    "canEditGlobals = %s " \
+    "canEditGlobals = %s, " \
+    "partnerStatus = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 
