@@ -14,6 +14,10 @@ selectOrderById = \
     "SELECT * FROM orders " \
     "WHERE id = %s"
 
+selectOrderByNumber = \
+    "SELECT * FROM orders " \
+    "WHERE number = %s"
+
 selectUserOrdersByUserId = \
     "SELECT * FROM orders " \
     "WHERE userId = %s"
@@ -38,6 +42,17 @@ updateOrderById = \
     "status = %s, " \
     "trackingCode = %s " \
     "WHERE id = %s " \
+    "RETURNING *"
+
+updateOrderByNumber = \
+    "UPDATE orders " \
+    "SET addressId = %s, " \
+    "addressTextCopy = %s, " \
+    "commentTextCopy = %s, " \
+    "updatedDate = NOW(), " \
+    "status = %s, " \
+    "trackingCode = %s " \
+    "WHERE number = %s " \
     "RETURNING *"
 
 updateOrderStatusById = \

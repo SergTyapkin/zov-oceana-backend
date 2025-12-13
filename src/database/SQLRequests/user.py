@@ -7,8 +7,8 @@ userPublicColumns = "users.id, users.avatarUrl, users.givenName, users.familyNam
 
 # ----- INSERTS -----
 insertUser = \
-    "INSERT INTO users (tgId, tgUsername, avatarUrl, email, tel, familyName, givenName, middleName, password) " \
-    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO users (tgId, tgUsername, avatarUrl, email, tel, familyName, givenName, middleName, password, referrerId) " \
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 insertSession = \

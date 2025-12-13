@@ -1,8 +1,8 @@
 from src.database.SQLRequests.user import userPublicColumns
 
 insertPartnerBonusesHistory = \
-    "INSERT INTO partnerBonusesHistory (userId, value, orderId, comment) " \
-    "VALUES (%s, %s, %s, %s) " \
+    "INSERT INTO partnerBonusesHistory (userId, fromUserId, value, orderId, comment) " \
+    "VALUES (%s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 # ------------------
@@ -27,10 +27,10 @@ selectAllBonusesByUserIdForLastMonth = \
     f"SELECT {userPublicColumns}, COALESCE(SUM(value), 0) as totalValue FROM partnerBonusesHistory " \
     "RIGHT JOIN users on users.id = partnerBonusesHistory.fromuserid " \
     "WHERE " \
-        "userId = 5 OR " \
+        "userId = %s OR " \
         "( " \
             "users.partnerStatus = true AND " \
-            "users.referrerid = 5 " \
+            "users.referrerid = %s " \
         ")" \
     "AND (date is null OR date > NOW() - INTERVAL '30 day') " \
     "GROUP BY users.id "
@@ -40,7 +40,7 @@ selectPartnersAndBonusesByUserIdForLastMonth = \
     "RIGHT JOIN users on users.id = partnerBonusesHistory.fromuserid " \
     "WHERE " \
         "users.partnerStatus = true AND " \
-        "users.referrerid = 5 " \
+        "users.referrerid = %s " \
     "AND (date is null OR date > NOW() - INTERVAL '30 day') " \
     "GROUP BY users.id "
 

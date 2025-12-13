@@ -146,7 +146,8 @@ def createOrder(userData):
 def updateOrderData(userData):
     try:
         req = request.json
-        id = req['id']
+        id = req.get('id')
+        number = req.get('number')
         addressId = req.get('addressId')
         addressTextCopy = req.get('addressTextCopy')
         commentTextCopy = req.get('commentTextCopy')
@@ -155,8 +156,13 @@ def updateOrderData(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    orderData = DB.execute(SQLOrders.selectOrderById, [id])
-    if orderData is None:
+    orderData = None
+    if id is not None:
+        orderData = DB.execute(SQLOrders.selectOrderById, [id])
+    elif number is not None:
+        orderData = DB.execute(SQLOrders.selectOrderByNumber, [number])
+
+    if not orderData:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
 
     if addressId is None: addressId = orderData['addressid']
@@ -166,7 +172,10 @@ def updateOrderData(userData):
     if trackingCode is None: trackingCode = orderData['trackingcode']
 
     try:
-        updatedOrderData = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
+        if id is not None:
+            updatedOrderData = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
+        elif number is not None:
+            updatedOrderData = DB.execute(SQLOrders.updateOrderByNumber, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, number])
     except Exception as err:
         return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 
@@ -177,8 +186,10 @@ def updateOrderData(userData):
     )
 
 
+    print(orderData['status'], status)
     if orderData['status'] != status: # if status is changed
         if status == OrderStatuses.paid:
+            print(updatedOrderData)
             addBonusesToReferrersByOrderData(updatedOrderData)
 
         try: # send TgBot notification

@@ -21,13 +21,15 @@ def getOrderTotalCost(orderData):
 
 def addBonusesToReferrersByOrderData(orderData):
     # Add bonus for referrer 1
+    print("OWNER ORDER", orderData['userid'])
     orderUserReferrerData = DB.execute(SQLUser.selectUserReferrerById, [orderData['userid']])
+    print("REFERRER", orderUserReferrerData)
     if not orderUserReferrerData:
         return
     totalCost = getOrderTotalCost(orderData)
     bonusesToReferrer = totalCost * ORDER_COST_PERCENT_TO_REFERRER_BONUSES
     DB.execute(SQLUser.updateUserAddPartnerBonusesById, [bonusesToReferrer, orderUserReferrerData['id']])
-    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [orderUserReferrerData['id'], bonusesToReferrer, orderData['id'], 'Lvl 0'])
+    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [orderUserReferrerData['id'], orderData['userid'], bonusesToReferrer, orderData['id'], 'Lvl 0'])
     insertHistory(
         orderUserReferrerData['id'],
         'bonus',
@@ -35,14 +37,14 @@ def addBonusesToReferrersByOrderData(orderData):
     )
 
     # Add bonus for referrer 2
-    orderUserReferrerData = DB.execute(SQLUser.selectUserReferrerById, [orderUserReferrerData['id']])
-    if not orderUserReferrerData:
+    orderUserReferrerData2 = DB.execute(SQLUser.selectUserReferrerById, [orderUserReferrerData['id']])
+    if not orderUserReferrerData2:
         return
     bonusesToReferrer = totalCost * ORDER_COST_PERCENT_TO_REFERRER_AHEAD_1_BONUSES
-    DB.execute(SQLUser.updateUserAddPartnerBonusesById, [bonusesToReferrer, orderUserReferrerData['id']])
-    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [orderUserReferrerData['id'], bonusesToReferrer, orderData['id'], 'Lvl 1'])
+    DB.execute(SQLUser.updateUserAddPartnerBonusesById, [bonusesToReferrer, orderUserReferrerData2['id']])
+    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [orderUserReferrerData2['id'], orderUserReferrerData['id'], bonusesToReferrer, orderData['id'], 'Lvl 1'])
     insertHistory(
-        orderUserReferrerData['id'],
+        orderUserReferrerData2['id'],
         'bonus',
         f'Gets {ORDER_COST_PERCENT_TO_REFERRER_BONUSES}% ({bonusesToReferrer}) in tree lvl1 from order :{orderData["number"]} #{orderData["id"]}'
     )

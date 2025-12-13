@@ -153,6 +153,8 @@ def userRegister():
         tgFirstName = req.get('tgFirstName')
         tgLastName = req.get('tgLastName')
 
+        referrerId = req.get('referrerId')
+
         givenName = req['givenName']
         middleName = req['middleName']
         familyName = req['familyName']
@@ -181,9 +183,8 @@ def userRegister():
         return jsonResponse("Email или телефон уже заняты", HTTP_DATA_CONFLICT)
 
     try:
-        print(SQLUser.insertUser, tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, password)
         userData = DB.execute(SQLUser.insertUser,
-                              [tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, password])
+                              [tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, password, referrerId])
     except Exception as err:
         return jsonResponse(f"Не удалось создать аккаунт. Внутренняя ошибка: {err.__repr__()}", HTTP_INTERNAL_ERROR)
 
