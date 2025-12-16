@@ -114,6 +114,11 @@ def userAuthByDefault():
     if not userData:
         return jsonResponse("Неверные email или пароль", HTTP_INVALID_AUTH_DATA)
 
+    insertHistory(
+        userData['id'],
+        'account',
+        'Login'
+    )
     return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
 
 @app.route("/auth/code", methods=["POST"])
@@ -138,6 +143,11 @@ def userAuthByCodeTg():
     #     return jsonResponse("Неверный ", HTTP_INVALID_AUTH_DATA)
 
     userData = DB.execute(SQLUser.selectUserById, [resp['userid']])
+    insertHistory(
+        userData['id'],
+        'account',
+        'Login by tg'
+    )
     return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
 
 
@@ -188,6 +198,11 @@ def userRegister():
     except Exception as err:
         return jsonResponse(f"Не удалось создать аккаунт. Внутренняя ошибка: {err.__repr__()}", HTTP_INTERNAL_ERROR)
 
+    insertHistory(
+        userData['id'],
+        'account',
+        'Registration'
+    )
     return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
 
 
@@ -219,6 +234,11 @@ def userAnotherSessionsDelete(userData):
         return jsonResponse(f"Сессия не удалена: {err.__repr__()}", HTTP_INTERNAL_ERROR)
 
     res = jsonResponse("Вы вышли из аккаунта")
+    insertHistory(
+        userData['id'],
+        'account',
+        'Revoke all other sessions'
+    )
     return res
 
 
@@ -450,6 +470,6 @@ def userUpdatePassword(userId):
     insertHistory(
         resp['id'],
         'account',
-        f'Password changed'
+        f'Password change'
     )
     return jsonResponse("Пароль изменен")

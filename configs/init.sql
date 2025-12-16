@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     joinedDate       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     password         TEXT NOT NULL,
     partnerStatus    BOOLEAN DEFAULT FALSE,
-    referrerId        INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    referrerId       INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     partnerBonuses   FLOAT NOT NULL DEFAULT 0,
 
     isEmailNotificationsOn  BOOLEAN DEFAULT TRUE,
