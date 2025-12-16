@@ -154,7 +154,8 @@ CREATE TABLE IF NOT EXISTS goodsInCarts (
 ------ Partner bonuses history ------
 CREATE TABLE IF NOT EXISTS partnerBonusesHistory (
     id             SERIAL PRIMARY KEY,
-    userId         INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    userId         INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+    fromUserId     INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     value          FLOAT NOT NULL,
     orderId        INT REFERENCES orders(id) ON DELETE SET NULL ON UPDATE CASCADE DEFAULT NULL,
     date           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
