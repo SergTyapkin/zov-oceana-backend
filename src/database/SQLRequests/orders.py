@@ -1,3 +1,5 @@
+from src.database.SQLRequests.user import userPublicColumns
+
 insertOrder = \
     "INSERT INTO orders (number, userId, addressId, addressTextCopy, commentTextCopy, secretCode) " \
     "VALUES (%s, %s, %s, %s, %s, %s) " \
@@ -14,20 +16,26 @@ selectOrderById = \
     "SELECT * FROM orders " \
     "WHERE id = %s"
 
+selectAllOrdersWithUsers = \
+    f"SELECT {userPublicColumns}, orders.* FROM orders " \
+    "LEFT JOIN users ON orders.userId = users.id " \
+    "ORDER BY createdDate DESC"
+
 selectOrderByNumber = \
     "SELECT * FROM orders " \
     "WHERE number = %s"
 
 selectUserOrdersByUserId = \
     "SELECT * FROM orders " \
-    "WHERE userId = %s"
+    "WHERE userId = %s" \
+    "ORDER BY createdDate DESC"
 
 selectMaxOrderId = \
     "SELECT MAX(id) as maxId " \
     "FROM orders"
 
 selectOrderGoodsByOrderId = \
-    "SELECT * FROM ordersGoods " \
+    "SELECT goods.*, ordersGoods.*, goods.id FROM ordersGoods " \
     "JOIN goods ON ordersGoods.goodsId = goods.id " \
     "WHERE orderId = %s"
 
@@ -80,3 +88,7 @@ deleteOrderGoodsByOrderIdGoodsId = \
     "DELETE FROM ordersGoods " \
     "WHERE orderId = %s " \
     "AND goodsId = %s "
+
+deleteAllOrderGoodsByOrderId = \
+    "DELETE FROM ordersGoods " \
+    "WHERE orderId = %s "

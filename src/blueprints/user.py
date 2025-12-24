@@ -392,7 +392,8 @@ def userDelete(userData):
 
 
 @app.route("/all")
-def usersGetAll():
+@login_and_can_edit_users_required
+def usersGetAll(userData):
     try:
         req = request.args
         search = req.get('search')

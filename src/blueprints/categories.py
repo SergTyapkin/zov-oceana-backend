@@ -28,8 +28,8 @@ def categoryCreate(userData):
     try:
         req = request.json
         title = req['title']
-        description = req.get('city')
-        imageId = req.get('street')
+        description = req.get('description')
+        imageId = req.get('imageId')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
@@ -62,7 +62,7 @@ def categoryUpdate(userData):
 
     if title is None: title = categoryData['title']
     if description is None: description = categoryData['description']
-    if imageId is None and 'imageId' not in req: imageId = categoryData['imageId']
+    if imageId is None and 'imageId' not in req: imageId = categoryData['imageid']
 
     category = DB.execute(SQLCategories.updateCategoryById, [title, description, imageId, id])
 

@@ -40,7 +40,8 @@ def goodsGet():
     return jsonResponse(goodsData)
 
 @app.route("/all")
-def goodsGetAll():
+@login_or_none
+def goodsGetAll(userData):
     try:
         req = request.args
         search = req.get('search')
@@ -55,7 +56,8 @@ def goodsGetAll():
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    goods = DB.execute(SQLGoods.selectGoods(req), [], manyResults=True)
+    print((req.get('isOnSale') != 'false') or not (userData and userData['caneditgoods']))
+    goods = DB.execute(SQLGoods.selectGoods(req, userData and userData['caneditgoods']), [], manyResults=True)
     for goodsOne in goods:
         prepareGoodsData(goodsOne)
     return jsonResponse({'goods': goods})
@@ -138,6 +140,11 @@ def goodsUpdate(userData):
     goodsData = DB.execute(SQLGoods.selectGoodsById, [id])
     if goodsData is None:
         return jsonResponse("Товар не найден", HTTP_NOT_FOUND)
+
+    try:
+        characters = json.dumps(characters)
+    except:
+        characters = None
 
     if title is None: title = goodsData['title']
     if description is None: description = goodsData['description']

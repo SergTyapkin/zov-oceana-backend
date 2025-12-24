@@ -5,11 +5,13 @@ insertCategory = \
 
 # ------------------
 selectCategoriesAll = \
-    "SELECT * FROM categories "
+    "SELECT * FROM categories " \
+    "ORDER BY id"
 
 selectCategoryById = \
     "SELECT * FROM categories " \
-    "WHERE id = %s"
+    "WHERE id = %s " \
+    "ORDER BY id"
 
 def selectCategoryBySearch(search: str):
     return \

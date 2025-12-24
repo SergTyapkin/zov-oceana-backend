@@ -10,14 +10,17 @@ insertGoodsCategories = \
 
 # ------------------
 
-def selectGoods(filters):
+def selectGoods(filters, isAdmin=False):
     search = filters.get('search')
     categoryId = filters.get('categoryId')
     costMin = filters.get('costMin')
     costMax = filters.get('costMax')
-    isOnSale = filters.get('isOnSale') != False
+    if isAdmin:
+        isOnSale = filters.get('isOnSale') != 'false' if filters.get('isOnSale') else None
+    else:
+        isOnSale = filters.get('isOnSale') != 'false'
     amountMin = filters.get('amountMin')
-    isWeighed = filters.get('isWeighed')
+    isWeighed = filters.get('isWeighed') != 'false' if filters.get('isWeighed') else None
     fromLocation = filters.get('fromLocation')
     limit = filters.get('limit')
 
@@ -63,7 +66,6 @@ updateGoodsById = \
     "UPDATE goods SET " \
     "title = %s, " \
     "description = %s, " \
-    "createdDate = %s, " \
     "fromLocation = %s, " \
     "amountLeft = %s, " \
     "amountStep = %s, " \

@@ -99,8 +99,8 @@ def imageGoodsUpload(userData):
             f'Image saved to filesystem at "{saveFullPath}", format: {saveFormat}, size: {img.size}, #{imageData["id"]}',
         )
 
-    maxSortingKey = DB.execute(SQLImages.selectMaxImageSortingKeyByGoodsId, [goodsId], manyResults=True)
-    maxSortingKey = maxSortingKey['maxsortingkey'] if maxSortingKey is not None else 0
+    maxSortingKey = DB.execute(SQLImages.selectMaxImageSortingKeyByGoodsId, [goodsId])
+    maxSortingKey = (maxSortingKey['maxsortingkey'] or 0) if maxSortingKey is not None else 0
 
     DB.execute(SQLImages.insertGoodsImage, [goodsId, imageData['id'], maxSortingKey + 1])
     return jsonResponse({'id': imageData['id'], 'path': imageData['path']})
@@ -108,37 +108,40 @@ def imageGoodsUpload(userData):
 
 @app.route("", methods=["DELETE"])
 @login_and_can_edit_goods_required
-def imageDelete(userId):
+def imageDelete(userData):
     try:
         req = request.json
-        imageId = req['imageId']
+        id = req['id']
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
     if config['save_images_to_db']:
-        DB.execute(SQLImages.deleteImageById, [imageId])
+        DB.execute(SQLImages.deleteImageById, [id])
 
         insertHistory(
-            userId,
+            userData['id'],
             'image',
-            f'Image deleted from database: #{imageId}',
+            f'Image deleted from database: #{id}',
         )
 
         return jsonResponse("Изображение удалено")
 
-    imageData = DB.execute(SQLImages.selectImageById, [imageId])
+    imageData = DB.execute(SQLImages.selectImageById, [id])
     if not imageData:
         return jsonResponse("Изображение не найдено в базе данных", HTTP_NOT_FOUND)
 
     fileName = imageData['path']
     fullPath = os.path.join(config['save_images_folder'], fileName)
     if not os.path.isfile(fullPath):
+        # DB.execute(SQLImages.deleteImageById, [id])
         return jsonResponse("Изображение не найдено в файловой системе", HTTP_NOT_FOUND)
 
     os.remove(fullPath)
 
+    DB.execute(SQLImages.deleteImageById, [id])
+
     insertHistory(
-        userId,
+        userData['id'],
         'image',
         f'Image deleted from filesystem from "{fullPath}", #{imageData["id"]}',
     )
