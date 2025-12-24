@@ -155,7 +155,7 @@ def createOrder(userData):
     return jsonResponse(orderData)
 
 @app.route("/admin", methods=["POST"])
-@login_required
+@login_and_can_edit_orders_required
 def createOrderByAdmin(userData):
     try:
         req = request.json
@@ -177,30 +177,12 @@ def createOrderByAdmin(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if (str(userId) != str(userData['id'])) and (not userData['caneditorders']):
-        return jsonResponse("Нет прав на создание заказов для другого пользователя", HTTP_NO_PERMISSIONS)
-
-    address = DB.execute(SQLAddresses.selectAddressById, [addressId])
-    if not address:
-        return jsonResponse("Адрес не найден", HTTP_NOT_FOUND)
-    if str(address['userid']) != str(userId):
-        return jsonResponse("Нельзя заказать на чужой адрес", HTTP_INVALID_DATA)
-
     symbols = string.digits
     randomSecretCode = ''.join(random.choice(symbols) for _ in range(ORDER_SECRET_CODE_GENERATE_LEN))
     maxOrderId = DB.execute(SQLOrders.selectMaxOrderId, [])
     maxOrderId = maxOrderId['maxid'] if maxOrderId and maxOrderId['maxid'] else 0
     orderNumber = (maxOrderId + 1) * ORDER_NUMBER_SEED % MAX_ORDER_NUMBER
-    addressTextCopy = \
-        f"г. {address['city']}" + \
-        (f", ул. {address['street']}" if address['street'] else '') + \
-        (f", д. {address['house']}" if address['house'] else '') + \
-        (f", п. {address['entrance']}" if address['entrance'] else '') + \
-        (f", эт. {address['floor']}" if address['floor'] else '') + \
-        (f", кв. {address['apartment']}" if address['apartment'] else '') + \
-        (f", Код: {address['code']}" if address['code'] else '')
-    commentTextCopy = address['comment']
-    orderData = DB.execute(SQLOrders.insertOrder, [orderNumber, userId, addressId, addressTextCopy, commentTextCopy, randomSecretCode])
+    orderData = DB.execute(SQLOrders.insertOrder, [orderNumber, userId, None, addressTextCopy, commentTextCopy, randomSecretCode])
     if orderData is None:
         return jsonResponse("Не удалось создать заказ", HTTP_INTERNAL_ERROR)
 
@@ -210,7 +192,7 @@ def createOrderByAdmin(userData):
         if goodsOneData is None:
             return jsonResponse(f"Товар #{goodsOne['id']} не найден", HTTP_NOT_FOUND)
 
-        goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOneData['cost'], goodsOne['amount']])
+        goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOne['cost'], goodsOne['amount']])
         if goodsInOrderData is None:
             return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
 
