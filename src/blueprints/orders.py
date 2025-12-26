@@ -1,8 +1,10 @@
+import json
 import random
 import string
 
 from flask import Blueprint
 
+from src.config import CONFIG
 from src.TgBot.TgBot import TgBotMessageTexts, TgBot
 from src.blueprints.goods import prepareGoodsData
 from src.blueprints.partners import addBonusesToReferrersByOrderData
@@ -110,10 +112,10 @@ def createOrder(userData):
         return jsonResponse("Нельзя заказать на чужой адрес", HTTP_INVALID_DATA)
 
     symbols = string.digits
-    randomSecretCode = ''.join(random.choice(symbols) for _ in range(ORDER_SECRET_CODE_GENERATE_LEN))
+    randomSecretCode = ''.join(random.choice(symbols) for _ in range(CONFIG.order_secret_code_generate_len))
     maxOrderId = DB.execute(SQLOrders.selectMaxOrderId, [])
     maxOrderId = maxOrderId['maxid'] if maxOrderId and maxOrderId['maxid'] else 0
-    orderNumber = (maxOrderId + 1) * ORDER_NUMBER_SEED % MAX_ORDER_NUMBER
+    orderNumber = (maxOrderId + 1) * CONFIG.order_number_seed % CONFIG.max_order_number
     addressTextCopy = \
         f"г. {address['city']}" + \
         (f", ул. {address['street']}" if address['street'] else '') + \
@@ -133,9 +135,13 @@ def createOrder(userData):
         if goodsOneData is None:
             return jsonResponse(f"Товар #{goodsOne['id']} не найден", HTTP_NOT_FOUND)
 
-        goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOneData['cost'], goodsOne['amount']])
-        if goodsInOrderData is None:
-            return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
+        try:
+            goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOneData['cost'], goodsOne['amount']])
+            if goodsInOrderData is None:
+                return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
+        except:
+            # Ошибка 409, товар уже добавлен
+            print(f"Товар уже есть в заказе! Заказ: #{orderData['id']}, Товар: #{goodsOne['id']} {goodsOne['title']}")
 
         goodsArrayInfoText += f"*{goodsOneData['title']}*, {goodsOne['amount']}кг\n"
 
@@ -144,7 +150,7 @@ def createOrder(userData):
         'order',
         f'Creates order: {orderData["number"]} #{orderData["id"]}", goods: {goods}'
     )
-
+    
     try:
         fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
         TgBot.sendMessage(fullUserData['tgid'], TgBotMessageTexts.orderCreated, orderData["number"], goodsArrayInfoText)
@@ -152,6 +158,7 @@ def createOrder(userData):
         print("Error. Cannot select user and send message by tg bot", err)
         pass
 
+    prepareOrder(orderData, True, True);
     return jsonResponse(orderData)
 
 @app.route("/admin", methods=["POST"])
@@ -214,16 +221,21 @@ def createOrderByAdmin(userData):
     return jsonResponse(orderData)
 
 @app.route("", methods=["PUT"])
-@login_and_can_edit_goods_required
+@login_and_can_edit_orders_required
 def updateOrderData(userData):
     try:
         req = request.json
         id = req.get('id')
+        userId = req.get('userId')
         number = req.get('number')
         addressId = req.get('addressId')
         addressTextCopy = req.get('addressTextCopy')
         commentTextCopy = req.get('commentTextCopy')
         status = req.get('status')
+        paymentStatus = req.get('paymentStatus')
+        paymentId = req.get('paymentId')
+        paymentUrl = req.get('paymentUrl')
+        paymentQrData = req.get('paymentQrData')
         trackingCode = req.get('trackingCode')
         goods = req.get('goods')
     except Exception as err:
@@ -248,17 +260,22 @@ def updateOrderData(userData):
     if not orderData:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
 
+    if userId is None: userId = orderData['userid']
     if addressId is None: addressId = orderData['addressid']
     if addressTextCopy is None: addressTextCopy = orderData['addresstextcopy']
     if commentTextCopy is None: commentTextCopy = orderData['commenttextcopy']
     if status is None: status = orderData['status']
+    if paymentStatus is None: paymentStatus = orderData['paymentstatus']
+    if paymentId is None: paymentId = orderData['paymentid']
+    if paymentUrl is None: paymentUrl = orderData['paymenturl']
+    if paymentQrData is None: paymentQrData = orderData['paymentqrdata']
     if trackingCode is None: trackingCode = orderData['trackingcode']
 
     try:
         if id is not None:
-            updatedOrderData = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
+            updatedOrderData = DB.execute(SQLOrders.updateOrderById, [userId, addressId, addressTextCopy, commentTextCopy, status, paymentStatus, paymentUrl, paymentQrData, paymentId, trackingCode, id])
         elif number is not None:
-            updatedOrderData = DB.execute(SQLOrders.updateOrderByNumber, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, number])
+            updatedOrderData = DB.execute(SQLOrders.updateOrderByNumber, [userId, addressId, addressTextCopy, commentTextCopy, status, paymentStatus, paymentUrl, paymentQrData, paymentId, trackingCode, number])
     except Exception as err:
         return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 
@@ -275,24 +292,49 @@ def updateOrderData(userData):
         f'Update order: {orderData["number"]} #{orderData["id"]} {json.dumps(req)}'
     )
 
-
+    # Проверяем, необходимо ли начислить бонусные баллы реферелам за заказ, и начисляем
+    if status == OrderStatuses.delivered and orderData['isreferrerbonusesadded'] == False:
+        addBonusesToReferrersByOrderData(updatedOrderData)  
+    
+    # Если изменился статус заказа, высылаем уведомление     
     if orderData['status'] != status: # if status is changed
-        if status == OrderStatuses.paid:
-            addBonusesToReferrersByOrderData(updatedOrderData)
-
         try: # send TgBot notification
             fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
-            messageText = "Статус заказа изменён на какой-то другой (???)"
+            messageText = "Статус заказа изменён на какой-то неизвестный (???)"
             if status == OrderStatuses.created:
                 messageText = TgBotMessageTexts.orderStatusToCreated
-            elif status == OrderStatuses.paid:
-                messageText = TgBotMessageTexts.orderStatusToPaid
+            elif status == OrderStatuses.accepted:
+                messageText = TgBotMessageTexts.orderStatusToAccepted
             elif status == OrderStatuses.prepared:
                 messageText = TgBotMessageTexts.orderStatusToPrepared
             elif status == OrderStatuses.delivered:
                 messageText = TgBotMessageTexts.orderStatusToDelivered
             elif status == OrderStatuses.cancelled:
                 messageText = TgBotMessageTexts.orderStatusToCancelled
+            TgBot.sendMessage(fullUserData['tgid'], messageText, orderData["number"])
+        except Exception as err:
+            print("Error. Cannot select user and send message by tg bot", err)
+            pass
+    
+    # Если изменился статус оплаты заказа, высылаем уведомление     
+    if orderData['paymentstatus'] != paymentStatus: # if payment status is changed
+        try: # send TgBot notification
+            fullUserData = DB.execute(SQLUser.selectUserById, [orderData['userid']])
+            messageText = "Статус оплаты заказа изменён на какой-то неизвестный (???)"
+            if paymentStatus == OrderPaymentStatuses.new:
+                messageText = TgBotMessageTexts.orderPaymentStatusToNew
+            elif paymentStatus == OrderPaymentStatuses.authorized:
+                messageText = TgBotMessageTexts.orderPaymentStatusToAuthorized
+            elif paymentStatus == OrderPaymentStatuses.confirmed:
+                messageText = TgBotMessageTexts.orderPaymentStatusToConfirmed
+            elif paymentStatus == OrderPaymentStatuses.expired:
+                messageText = TgBotMessageTexts.orderPaymentStatusToExpired
+            elif paymentStatus == OrderPaymentStatuses.rejected:
+                messageText = TgBotMessageTexts.orderPaymentStatusToRejected
+            elif paymentStatus == OrderPaymentStatuses.refunded:
+                messageText = TgBotMessageTexts.orderPaymentStatusToRefunded
+            elif paymentStatus == OrderPaymentStatuses.cancelled:
+                messageText = TgBotMessageTexts.orderPaymentStatusToCancelled
             TgBot.sendMessage(fullUserData['tgid'], messageText, orderData["number"])
         except Exception as err:
             print("Error. Cannot select user and send message by tg bot", err)

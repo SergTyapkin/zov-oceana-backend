@@ -75,6 +75,7 @@ def goodsCreate(userData):
         amountStep = req['amountStep']
         amountMin = req['amountMin']
         isWeighed = req['isWeighed']
+        isDelicates = req['isDelicates']
         cost = req['cost']
         isOnSale = True if req.get('isOnSale') is None else req.get('isOnSale')
         characters = req.get('characters')
@@ -85,7 +86,7 @@ def goodsCreate(userData):
         characters = json.dumps(characters)
     except:
         characters = None
-    goods = DB.execute(SQLGoods.insertGoods, [title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, characters])
+    goods = DB.execute(SQLGoods.insertGoods, [title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, isDelicates, characters])
 
     insertHistory(
         userData["id"],
@@ -132,6 +133,7 @@ def goodsUpdate(userData):
         amountMin = req.get('amountMin')
         cost = req.get('cost')
         isWeighed = req.get('isWeighed')
+        isDelicates = req.get('isDelicates')
         isOnSale = req.get('isOnSale')
         characters = req.get('characters')
     except Exception as err:
@@ -155,9 +157,10 @@ def goodsUpdate(userData):
     if cost is None: cost = goodsData['cost']
     if isWeighed is None: isWeighed = goodsData['isweighed']
     if isOnSale is None: isOnSale = goodsData['isonsale']
+    if isDelicates is None: isDelicates = goodsData['isdelicates']
     if characters is None: characters = goodsData['characters']
 
-    goods = DB.execute(SQLGoods.updateGoodsById, [title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, characters, id])
+    goods = DB.execute(SQLGoods.updateGoodsById, [title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, isDelicates, characters, id])
 
     insertHistory(
         userData["id"],

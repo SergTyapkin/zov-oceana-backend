@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image
 from flask import Blueprint, Response
 
-from src.connections import config
+from src.config import CONFIG
 from src.utils.access import *
 from src.utils.utils import *
 from src.database.databaseUtils import insertHistory
@@ -16,13 +16,13 @@ import base64
 
 app = Blueprint('images', __name__)
 
-MAX_SIZE = config['max_image_size_px']
+MAX_SIZE = CONFIG.max_image_size_px
 
 
 @app.route("/<imageId>.<imageExt>")
 @app.route("/<imageId>")
 def imageGet(imageId, imageExt=None):
-    if not config['save_images_to_db']:
+    if not CONFIG.save_images_to_db:
         return jsonResponse("Конфигурацией сервера задано, что он не должен отдавать картинки. Настройте их как раздачу статики через сторонний сервер для статики", HTTP_INTERNAL_ERROR)
 
     if not imageId.isnumeric():
@@ -72,7 +72,7 @@ def imageGoodsUpload(userData):
     if img.mode == 'RGBA':
         saveFormat = 'PNG'
 
-    if config['save_images_to_db']:
+    if CONFIG.save_images_to_db:
         optimized = BytesIO()
         img.save(optimized, format=saveFormat, optimize=True, quality=85)
         hex_data = optimized.getvalue()
@@ -88,7 +88,7 @@ def imageGoodsUpload(userData):
         chars = string.ascii_letters + string.digits
         randomFileNameUid = ''.join(random.choice(chars) for _ in range(IMAGE_UID_GENERATE_LEN))
         fileName = f"{userData['id']}_{randomFileNameUid}.{saveFormat.lower()}"
-        saveFullPath = os.path.join(config['save_images_folder'], fileName)
+        saveFullPath = os.path.join(CONFIG.save_images_folder, fileName)
         img.save(saveFullPath, format=saveFormat, optimize=True, quality=85)
 
         imageData = DB.execute(SQLImages.insertImageByPath, [saveFormat.lower(), fileName])
@@ -115,7 +115,7 @@ def imageDelete(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    if config['save_images_to_db']:
+    if CONFIG.save_images_to_db:
         DB.execute(SQLImages.deleteImageById, [id])
 
         insertHistory(
@@ -131,7 +131,7 @@ def imageDelete(userData):
         return jsonResponse("Изображение не найдено в базе данных", HTTP_NOT_FOUND)
 
     fileName = imageData['path']
-    fullPath = os.path.join(config['save_images_folder'], fileName)
+    fullPath = os.path.join(CONFIG.save_images_folder, fileName)
     if not os.path.isfile(fullPath):
         # DB.execute(SQLImages.deleteImageById, [id])
         return jsonResponse("Изображение не найдено в файловой системе", HTTP_NOT_FOUND)

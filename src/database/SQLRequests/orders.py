@@ -43,22 +43,32 @@ selectOrderGoodsByOrderId = \
 
 updateOrderById = \
     "UPDATE orders " \
-    "SET addressId = %s, " \
+    "SET userId = %s, " \
+    "addressId = %s, " \
     "addressTextCopy = %s, " \
     "commentTextCopy = %s, " \
     "updatedDate = NOW(), " \
     "status = %s, " \
+    "paymentStatus = %s, " \
+    "paymentUrl = %s, " \
+    "paymentQrData = %s, " \
+    "paymentId = %s, " \
     "trackingCode = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 
 updateOrderByNumber = \
     "UPDATE orders " \
-    "SET addressId = %s, " \
+    "SET userId = %s, " \
+    "addressId = %s, " \
     "addressTextCopy = %s, " \
     "commentTextCopy = %s, " \
     "updatedDate = NOW(), " \
     "status = %s, " \
+    "paymentStatus = %s, " \
+    "paymentUrl = %s, " \
+    "paymentQrData = %s, " \
+    "paymentId = %s, " \
     "trackingCode = %s " \
     "WHERE number = %s " \
     "RETURNING *"
@@ -66,6 +76,24 @@ updateOrderByNumber = \
 updateOrderStatusById = \
     "UPDATE orders " \
     "SET status = %s, " \
+    "updatedDate = NOW() " \
+    "WHERE id = %s " \
+    "RETURNING *"
+
+updateOrderPaymentStatusById = \
+    "UPDATE orders " \
+    "SET paymentStatus = %s, " \
+    "updatedDate = NOW() " \
+    "WHERE id = %s " \
+    "RETURNING *"
+
+updateOrderPaymentIdUrlStatusQrdataById = \
+    "UPDATE orders " \
+    "SET paymentId = %s, " \
+    "paymentUrl = %s, " \
+    "paymentStatus = %s, " \
+    "paymentQrData = %s, " \
+    "paymentCreatedDate = NOW() " \
     "updatedDate = NOW() " \
     "WHERE id = %s " \
     "RETURNING *"

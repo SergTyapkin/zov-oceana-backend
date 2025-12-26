@@ -1,3 +1,6 @@
+from src.config import CONFIG
+
+
 def _default_template(avatarUrl, fullName, htmlContent):
     avatarDiv = '<br>'
     if avatarUrl:
@@ -26,7 +29,7 @@ def _default_template(avatarUrl, fullName, htmlContent):
                 
           <br>
           <div style="padding: 0;color: #aaa;font-size: 11px;text-align: left;">
-            <span>Вы видите это письмо, потому что этот этот адрес указан при регистрации на zovoceana.ru.</span>
+            <span>Вы видите это письмо, потому что этот этот адрес указан при регистрации на {CONFIG.deploy_short_url}.</span>
             <br>
             <span>С этого электронного адреса будут приходить только важные письма для восстановления пароля, входа в аккаунт и.т.п.</span>
           </div>
@@ -34,7 +37,7 @@ def _default_template(avatarUrl, fullName, htmlContent):
     
         <div style="padding: 20px 30px;color: #666;overflow: auto;background-color: #00000055;border-radius: 7px">
           <span style="float: left">
-            <a href="https://zovoceana.ru" target="_blank" style="font-size: 13px;font-weight: bold;color: #e7e7e7 !important;" rel="noopener noreferrer">zovoceana.ru</a>
+            <a href="{CONFIG.deploy_full_url}" target="_blank" style="font-size: 13px;font-weight: bold;color: #e7e7e7 !important;" rel="noopener noreferrer">zovoceana.ru</a>
             <br>
             <span style="color: #b9b9b9;font-size: 12px;">Сергей Тяпкин</span>
           </span>

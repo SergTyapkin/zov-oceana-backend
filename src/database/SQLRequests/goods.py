@@ -1,6 +1,6 @@
 insertGoods = \
-    "INSERT INTO goods (title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, characters) " \
-    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO goods (title, description, fromLocation, amountLeft, amountStep, amountMin, cost, isWeighed, isOnSale, isDelicates, characters) " \
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 insertGoodsCategories = \
@@ -21,6 +21,7 @@ def selectGoods(filters, isAdmin=False):
         isOnSale = filters.get('isOnSale') != 'false'
     amountMin = filters.get('amountMin')
     isWeighed = filters.get('isWeighed') != 'false' if filters.get('isWeighed') else None
+    isDelicates = filters.get('isDelicates') != 'false' if filters.get('isDelicates') else None
     fromLocation = filters.get('fromLocation')
     limit = filters.get('limit')
 
@@ -29,6 +30,7 @@ def selectGoods(filters, isAdmin=False):
             "WHERE " + \
             (f"isOnSale = '{isOnSale}' AND " if isOnSale is not None else "") + \
             (f"isWeighed = '{isWeighed}' AND " if isWeighed is not None else "") + \
+            (f"isDelicates = '{isDelicates}' AND " if isDelicates is not None else "") + \
             (f"categories.id = '{categoryId}' AND " if categoryId is not None else "") + \
             (f"cost <= '{costMax}' AND " if costMax is not None else "") + \
             (f"cost >= '{costMin}' AND " if costMin is not None else "") + \
@@ -73,6 +75,7 @@ updateGoodsById = \
     "cost = %s, " \
     "isWeighed = %s, " \
     "isOnSale = %s, " \
+    "isDelicates = %s, " \
     "characters = %s " \
     "WHERE id = %s " \
     "RETURNING *"

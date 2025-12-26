@@ -1,12 +1,10 @@
 from src.database.database import Database
-from src.utils.utils import read_config
+from src.config import CONFIG
 
-
-config = read_config('./configs/config.json')
 DB = Database(
-    host=config['db_host'],
-    port=config['db_port'],
-    user=config['db_user'],
-    password=config['db_password'],
-    dbname=config['db_name'],
+    host=CONFIG.db.host,
+    port=CONFIG.db.port,
+    user=CONFIG.db.user,
+    password=CONFIG.db.password,
+    dbname=CONFIG.db.name,
 )

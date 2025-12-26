@@ -1,10 +1,10 @@
-Flask==2.0.1
-Werkzeug==2.0.1
-psycopg2-binary==2.9.10
-gunicorn==19.9.0
-Pillow==9.1.0
+Flask==3.0.3
+Werkzeug==3.0.3
+psycopg==3.2.1
+gunicorn==22.0.0
+Pillow==10.4.0
 Flask-Mail==0.9.1
-geoip2==4.7.0
+geoip2==4.8.0
 pycolors==0.1.2
 rfc3339==6.2
-pytelegrambotapi==4.28.0
+pytelegrambotapi==4.22.0

@@ -4,29 +4,47 @@ import json
 
 import telebot
 
-from src.connections import config
+from src.config import CONFIG
+from src.constants import *
 from src.database.databaseUtils import createSecretCode
 
 
 @dataclass
 class TgBotMessageTexts:
-    orderCreated = f"✅ Создан заказ №`%s`.\nВ заказе: %s\n\nОн ожидает оплаты. _Возможно, нужно некоторое время на совершение платежа_"
-    orderPayed = f"✅ Заказ №`%s` оплачен и передан в сборку"
-    orderPrepared = f"✅ Заказ №`%s` собран и передан в доставку.\nКод отслеживания: `%s`"
+    orderCreated =   f"✅ Создан заказ №`%s`.\nВ заказе: %s"
+    orderAccepted =  f"✅ Заказ №`%s` подтвержден и передан в сборку"
+    orderPrepared =  f"✅ Заказ №`%s` собран и передан в доставку"
+    orderPreparedWithCode =  f"✅ Заказ №`%s` собран и передан в доставку.\nКод отслеживания: `%s`"
     orderDelivered = f"✅ Заказ №`%s` доставлен"
-    orderCancelled = f"❌ Заказ №`%s` успешно отменён"
-    orderDeleted = f"❌ Заказ №`%s` был удалён"
-    orderStatusToCreated = f"ℹ️ Статус заказа №`%s` изменен на 'создан, не оплачен'"
-    orderStatusToPaid = f"ℹ️ Статус заказа №`%s` изменен на 'оплачен, ожидает сборки'"
-    orderStatusToPrepared = f"ℹ️ Статус заказа №`%s` изменен на 'собран, ожидает доставки'"
+    orderCancelled = f"❌ Заказ №`%s` был отменён"
+    orderDeleted =   f"❌ Заказ №`%s` был удалён"
+    
+    orderPaymentAuthorized = f"✅ Деньги для оплаты заказа №`%s` заморожены на вашей карте.\nОператор позвонит вам и оплата будет списана после подтверждения заказа"
+    orderPaymentConfirmed =  f"✅ Заказ №`%s` успешно оплачен"
+    orderPaymentExpired =    f"❌ Заказ №`%s` не оплачен в течение {round(CONFIG.tbank.max_order_pay_time_sec / 60)} минут. _Пожалуйста, повторите попытку оплаты [на странице заказа]({CONFIG.deploy_full_url}/payment/order/%s)_"
+    orderPaymentRejected =   f"❌ Оплата заказа №`%s` отклонена банком. _Пожалуйста, повторите попытку оплаты [на странице заказа]({CONFIG.deploy_full_url}/payment/order/%s)_"
+    orderPaymentRefunded =   f"♻ Возврат по заказу №`%s` был успешно произведен.\n_Деньги возвращены на счет, с которого заказ был оплачен_"
+    orderPaymentCancelled =  f"⚠ Оплата заказа №`%s` отменена.\n_Деньги на вашем счете, замороженные для оплаты этого заказа, разморожены_"
+    
+    orderStatusToCreated =   f"ℹ️ Статус заказа №`%s` изменен на 'создан, не подтвержден'"
+    orderStatusToAccepted =  f"ℹ️ Статус заказа №`%s` изменен на 'подтвержден, ожидает сборки'"
+    orderStatusToPrepared =  f"ℹ️ Статус заказа №`%s` изменен на 'собран, ожидает доставки'"
     orderStatusToDelivered = f"ℹ️ Статус заказа №`%s` изменен на 'доставлен'"
     orderStatusToCancelled = f"ℹ️ Статус заказа №`%s` изменен на 'отменён'"
+    
+    orderPaymentStatusToNew =        f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Создана, не произведена'"
+    orderPaymentStatusToAuthorized = f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Деньги заморожены на карте, оплата не списана'"
+    orderPaymentStatusToConfirmed =  f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Успешно произведена'"
+    orderPaymentStatusToExpired =    f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Истек срок проведения платежа'"
+    orderPaymentStatusToRejected =   f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Отклонена банком'"
+    orderPaymentStatusToRefunded =   f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Произведен возврат'"
+    orderPaymentStatusToCancelled =  f"ℹ️ Статус оплаты заказа №`%s` изменен на 'Отменена'"
 
 class TgBotClass:
-    def __new__(cls, config):
+    def __new__(cls):
         if not hasattr(cls, 'instance'):
-            cls.token = config['tg_bot_token']
-            cls.is_enabled = config['tg_bot_enabled']
+            cls.token = CONFIG.telegram.bot_token
+            cls.is_enabled = CONFIG.telegram.bot_enabled
             cls.thread = None
             cls.init(cls)
             cls.instance = super(TgBotClass, cls).__new__(cls)
@@ -43,7 +61,7 @@ class TgBotClass:
             markupWithLinkButton = telebot.types.InlineKeyboardMarkup()
             btn1 = telebot.types.InlineKeyboardButton(
                 text='Перейти на сайт',
-                url='https://zovoceana.ru'
+                url=CONFIG.deploy_full_url
             )
             markupWithLinkButton.add(btn1)
 
@@ -80,7 +98,7 @@ class TgBotClass:
                     markup = telebot.types.InlineKeyboardMarkup()
                     btnEnter = telebot.types.InlineKeyboardButton(
                         text='Войти на сайте',
-                        url=f'https://zovoceana.ru/login?code={secretCode}'
+                        url=f'{CONFIG.deploy_short_url}/login?code={secretCode}'
                     )
                     markup.add(btnEnter)
                     self.bot.send_message(
@@ -92,7 +110,7 @@ class TgBotClass:
                 else:
                     self.bot.send_message(
                         message.from_user.id,
-                        "📝 Этот бот будет присылать уведомления о действиях и заказах на сайте zovoceana.ru",
+                        f"📝 Этот бот будет присылать уведомления о действиях и заказах на сайте {CONFIG.deploy_short_url}",
                         reply_markup=markupWithLinkButton
                     )
 
@@ -114,13 +132,16 @@ class TgBotClass:
         self.thread.start()
 
     def sendMessage(self, userTgId: str, MessageText: str, *values: list[str]):
-        if not self.is_enabled:
-            print("[TgBot] TgBot not enabled in config")
-            return
-        message = MessageText % values
-        print(f"[TgBot] Send message to #{userTgId}:", message)
-        self.bot.send_message(userTgId, message, parse_mode='MarkdownV2')
-
+        try:
+            if not self.is_enabled:
+                print("[TgBot] TgBot not enabled in config")
+                return
+            message = MessageText % values
+            print(f"[TgBot] Send message to #{userTgId}:", message)
+            self.bot.send_message(userTgId, message, parse_mode='MarkdownV2')
+        except Exception as e: 
+            print("[TgBot] ERROR: Can't send message to user:", userTgId, "Message:", message, "Error:", e)
+    
     def startBotPolling(self):
         if not self.is_enabled:
             return
@@ -130,4 +151,4 @@ class TgBotClass:
             print(f"[TgBot] Error in polling cycle:", e)
 
 
-TgBot = TgBotClass(config)
+TgBot = TgBotClass()

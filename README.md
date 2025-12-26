@@ -76,7 +76,7 @@ pip install -r requirements.txt
 
 ### Старт
 ```shell
-python main.py
+python -m src.main
 ```
 
 ### Перейти по адресу

@@ -11,5 +11,6 @@ selectGlobals = \
 # ----- UPDATES -----
 updateGlobals = \
     "UPDATE globals SET " \
-    "isOnMaintenance = %s " \
+    "isOnMaintenance = %s, " \
+    "goodsIdsOnLanding = %s " \
     "RETURNING *"

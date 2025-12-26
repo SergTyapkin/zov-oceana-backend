@@ -3,12 +3,12 @@
 # -----------------------
 import json
 
-userPublicColumns = "users.id, users.avatarUrl, users.givenName, users.familyName, users.joinedDate"
+userPublicColumns = "users.id, users.avatarUrl, users.givenName, users.familyName, users.joinedDate, users.city"
 
 # ----- INSERTS -----
 insertUser = \
-    "INSERT INTO users (tgId, tgUsername, avatarUrl, email, tel, familyName, givenName, middleName, password, referrerId) " \
-    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
+    "INSERT INTO users (tgId, tgUsername, avatarUrl, email, tel, familyName, givenName, middleName, city, password, referrerId) " \
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 insertSession = \
@@ -103,6 +103,17 @@ def selectUsersByFilters(filters):
             "1 = 1 " \
             "ORDER BY " + f"{', '.join(ordering + ['id'])}"
 
+selectAllUsers = \
+    "SELECT * FROM users " \
+    "ORDER BY joinedDate "
+
+selectAllUsersWithOrdersCount = \
+    "SELECT users.*, COUNT(orders.*) ordersCount, SUM(ordersGoods.amount * ordersGoods.cost) totalOrdersCost FROM users " \
+    "LEFT JOIN orders ON orders.userId = users.id " \
+    "LEFT JOIN ordersGoods ON ordersGoods.orderId = orders.id " \
+    "GROUP BY users.id " \
+    "ORDER BY joinedDate "
+
 selectSecretCodeByUserIdType = \
     "SELECT * FROM secretCodes " \
     "WHERE userId = %s AND " \
@@ -146,6 +157,7 @@ updateUserById = \
     "tel = %s, " \
     "isEmailNotificationsOn = %s, " \
     "avatarUrl = %s, " \
+    "city = %s, " \
     "partnerStatus = %s " \
     "WHERE id = %s " \
     "RETURNING *"
@@ -161,6 +173,8 @@ adminUpdateUserById = \
     "tel = %s, " \
     "isEmailNotificationsOn = %s, " \
     "avatarUrl = %s, " \
+    "city = %s, " \
+    "referrerId = %s, " \
     "canEditOrders = %s, " \
     "canEditUsers = %s, " \
     "canEditGoods = %s, " \

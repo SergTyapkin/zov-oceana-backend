@@ -8,6 +8,7 @@ import datetime
 import time
 from rfc3339 import rfc3339
 
+from src.config import CONFIG
 from src.blueprints.user import app as user_app
 from src.blueprints.sql import app as sql_app
 from src.blueprints.goods import app as goods_app
@@ -18,8 +19,8 @@ from src.blueprints.orders import app as orders_app
 from src.blueprints.carts import app as cart_app
 from src.blueprints.partners import app as partners_app
 from src.blueprints.globals import app as globals_app
-from src.connections import config, DB
-from src.constants import HTTP_NOT_FOUND, HTTP_INTERNAL_ERROR, MAX_LOG_DATA_LENGTH
+from src.blueprints.payments import app as payments_app, DB
+from src.constants import HTTP_NOT_FOUND, HTTP_INTERNAL_ERROR
 from src.middleware import Middleware
 from src.utils.utils import jsonResponse
 
@@ -27,8 +28,8 @@ from src.database.SQLRequests import globals as SQLGlobals
 
 
 app = Flask(__name__)
-app.config['DEBUG'] = config['debug']
-app.wsgi_app = Middleware(app.wsgi_app, url_prefix='/api', cors_origins=config['cors-origins'])
+app.config['DEBUG'] = CONFIG.debug
+app.wsgi_app = Middleware(app.wsgi_app, url_prefix='/api', cors_origins=CONFIG.cors_origins)
 
 app.register_blueprint(user_app, url_prefix='/user')
 app.register_blueprint(sql_app, url_prefix='/sql')
@@ -40,20 +41,21 @@ app.register_blueprint(orders_app, url_prefix='/orders')
 app.register_blueprint(cart_app, url_prefix='/cart')
 app.register_blueprint(partners_app, url_prefix='/partner')
 app.register_blueprint(globals_app, url_prefix='/globals')
+app.register_blueprint(payments_app, url_prefix='/payments')
 
-app.config['MAIL_SERVER'] = config['SMTP_mail_server_host']
-app.config['MAIL_PORT'] = config['SMTP_mail_server_port']
-app.config['MAIL_USE_TLS'] = config['SMTP_mail_server_use_tls']
-app.config['MAIL_USERNAME'] = config['mail_address']
-app.config['MAIL_DEFAULT_SENDER'] = config['mail_sender_name']
-app.config['MAIL_PASSWORD'] = config['mail_password']
+app.config['MAIL_SERVER'] = CONFIG.email.smtp_host
+app.config['MAIL_PORT'] = CONFIG.email.smtp_port
+app.config['MAIL_USE_TLS'] = CONFIG.email.smtp_use_tls
+app.config['MAIL_USERNAME'] = CONFIG.email.address
+app.config['MAIL_DEFAULT_SENDER'] = CONFIG.email.sender_name
+app.config['MAIL_PASSWORD'] = CONFIG.email.password
 
 mail = Mail(app)
 
 
 @app.route('/')
 def home():
-    return "Это начальная страница API сайта, а не сам сайт. Вiйди отсюда!"
+    return "Это начальная страница API сайта, а не сам сайт. Выйди отсюда!"
 
 
 @app.route('/health')
@@ -107,7 +109,7 @@ def log_request(response):
         (f'query={args}', blue),
         (f'body={json}', cyan),
         (f'RES_code={response.status_code}', light_gray),
-        (f'RES_data={responseText[:MAX_LOG_DATA_LENGTH] + (f"... ({len(responseText)} symbols total)" if len(responseText) > MAX_LOG_DATA_LENGTH else "")}', light_gray),
+        (f'RES_data={responseText[:CONFIG.max_log_data_length] + (f"... ({len(responseText)} symbols total)" if len(responseText) > CONFIG.max_log_data_length else "")}', light_gray),
         (f'\n', light_gray),
     ]
 
@@ -131,5 +133,6 @@ if __name__ == '__main__':
     # Create global settings if it doesn't exist now
     if not DB.execute(SQLGlobals.selectGlobals):
         DB.execute(SQLGlobals.insertGlobals)
-    port = int(os.environ.get('PORT', config['port']))
-    app.run(port=port, debug=bool(config['debug']))
+
+    # Run app
+    app.run(host=CONFIG.host, port=CONFIG.port, debug=CONFIG.debug)

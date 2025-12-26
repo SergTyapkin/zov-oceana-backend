@@ -5,10 +5,9 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
 
-from src.connections import config
+from src.config import CONFIG
 
-DB_NAME = "tech-support"
-MAIL_RECIPIENT = config["mail_address"]
+
 MAIL_HTML = """<html>
   <head></head>
   <body>
@@ -26,9 +25,9 @@ if __name__ == '__main__':
     MAIL_FILE_NAME = f"backup_{WEEKDAY}_{TIMESTAMP}.pg_backup"
 
     msg = MIMEMultipart()
-    msg['Subject'] = f"{WEEKDAY}(GMT) Backup of {DB_NAME}"
-    msg['From'] = config["mail_sender_name"]
-    msg['To'] = MAIL_RECIPIENT
+    msg['Subject'] = f"{WEEKDAY}(GMT) Backup of {CONFIG.db.name}"
+    msg['From'] = CONFIG.email.address
+    msg['To'] = CONFIG.email.address
     msg.attach(MIMEText(MAIL_HTML, 'html'))
     with open(PG_DUMP_FULLPATH, "rb") as f:
         part = MIMEApplication(
@@ -39,11 +38,11 @@ if __name__ == '__main__':
     part['Content-Disposition'] = f'attachment; filename="{MAIL_FILE_NAME}"'
     msg.attach(part)
 
-    server = smtplib.SMTP(host=config["SMTP_mail_server_host"], port=config["SMTP_mail_server_port"])
+    server = smtplib.SMTP(host=CONFIG.email.host, port=CONFIG.email.port)
     server.set_debuglevel(1)
     server.ehlo()
     server.starttls()
-    server.login(config["mail_address"], config["mail_password"])
+    server.login(CONFIG.email.address, CONFIG.email.password)
     server.send_message(msg)
     server.quit()
-    print(f'Successfully sent the mail with backup to: {MAIL_RECIPIENT} as {MAIL_FILE_NAME}')
+    print(f'Successfully sent the mail with backup to: {CONFIG.email.address} as {MAIL_FILE_NAME}')

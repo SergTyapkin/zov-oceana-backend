@@ -3,13 +3,14 @@ CREATE TABLE IF NOT EXISTS users (
     id               SERIAL PRIMARY KEY,
     tgUsername       TEXT DEFAULT NULL UNIQUE,
     tgId             TEXT DEFAULT NULL UNIQUE,
-    email            TEXT DEFAULT NULL UNIQUE,
+    email            TEXT NOT NULL UNIQUE,
     isConfirmedEmail BOOLEAN NOT NULL DEFAULT FALSE,
-    tel              TEXT DEFAULT NULL UNIQUE,
+    tel              TEXT NOT NULL UNIQUE,
     avatarUrl        TEXT DEFAULT NULL,
-    familyName       TEXT DEFAULT NULL,
-    givenName        TEXT DEFAULT NULL,
+    familyName       TEXT NOT NULL,
+    givenName        TEXT NOT NULL,
     middleName       TEXT DEFAULT NULL,
+    city             TEXT NOT NULL,
     joinedDate       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     password         TEXT NOT NULL,
     partnerStatus    BOOLEAN DEFAULT FALSE,
@@ -65,7 +66,7 @@ CREATE TABLE IF NOT EXISTS addresses (
     street         TEXT DEFAULT NULL,
     house          TEXT DEFAULT NULL,
     entrance       TEXT DEFAULT NULL,
-    apartment          TEXT DEFAULT NULL,
+    apartment      TEXT DEFAULT NULL,
     floor          TEXT DEFAULT NULL,
     code           TEXT DEFAULT NULL,
     comment        TEXT DEFAULT NULL
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS goods (
     cost                 FLOAT NOT NULL,
     isWeighed            BOOLEAN NOT NULL,
     isOnSale             BOOLEAN NOT NULL,
+    isDelicates          BOOLEAN NOT NULL,
     characters           TEXT
 );
 
@@ -114,7 +116,12 @@ CREATE TABLE IF NOT EXISTS goodsImages (
 ------ Orders data ------
 do $$ begin
     if not exists (select 1 from pg_type where typname = 'orderstatus') then
-        CREATE TYPE orderStatus AS ENUM ('created', 'paid', 'prepared', 'delivered', 'cancelled');
+        CREATE TYPE orderStatus AS ENUM ('created', 'accepted', 'prepared', 'delivered', 'cancelled');
+    end if;
+end $$;
+do $$ begin
+    if not exists (select 1 from pg_type where typname = 'paymentstatus') then
+        CREATE TYPE paymentStatus AS ENUM ('new', 'authorized', 'confirmed', 'expired', 'rejected', 'refunded');
     end if;
 end $$;
 
@@ -129,7 +136,14 @@ CREATE TABLE IF NOT EXISTS orders (
     createdDate     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updatedDate     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     status          orderStatus NOT NULL DEFAULT 'created',
-    trackingCode    TEXT DEFAULT NULL
+    isReferrerBonusesAdded  BOOLEAN NOT NULL DEFAULT FALSE,
+    trackingCode    TEXT DEFAULT NULL,
+
+    paymentStatus   paymentStatus DEFAULT NULL,
+    paymentId       TEXT DEFAULT NULL,
+    paymentUrl      TEXT DEFAULT NULL,
+    paymentQrData   TEXT DEFAULT NULL,
+    paymentCreatedDate TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS ordersGoods (
     id              SERIAL PRIMARY KEY,

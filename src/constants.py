@@ -10,23 +10,37 @@ HTTP_NOT_FULL_DATA = 424
 HTTP_INTERNAL_ERROR = 500
 HTTP_OK = 200
 
-MAX_LOG_DATA_LENGTH = 512
-
-IMAGE_UID_GENERATE_LEN = 30
-ORDER_SECRET_CODE_GENERATE_LEN = 6
-MAX_ORDER_NUMBER = 999999
-ORDER_NUMBER_SEED = 5901273812
-
-ORDER_COST_PERCENT_TO_REFERRER_BONUSES = 0.10
-ORDER_COST_PERCENT_TO_REFERRER_AHEAD_1_BONUSES = 0.08
-# ORDER_COST_PERCENT_TO_REFERRER_AHEAD_2_BONUSES = 0.06
-# ORDER_COST_PERCENT_TO_REFERRER_AHEAD_3_BONUSES = 0.04
-# ORDER_COST_PERCENT_TO_REFERRER_AHEAD_4_BONUSES = 0.02
-
 @dataclass
 class OrderStatuses:
     created = 'created'
-    paid = 'paid'
+    accepted = 'accepted'
     prepared = 'prepared'
     delivered = 'delivered'
     cancelled = 'cancelled'
+
+@dataclass
+class OrderPaymentStatuses:
+    new = 'new'
+    authorized = 'authorized'
+    confirmed = 'confirmed'
+    expired = 'expired'
+    rejected = 'rejected'
+    refunded = 'refunded'    
+    cancelled = 'cancelled'    
+
+@dataclass
+class PaymentStatuses:
+    """Статусы платежа Tinkoff"""
+    NEW = 'NEW'  # Платеж создан
+    AUTHORIZED = 'AUTHORIZED'  # Платеж авторизован
+    CONFIRMED = 'CONFIRMED'  # Платеж подтвержден
+    CANCELLED = 'CANCELLED'  # Платеж отменен до авторизации
+    REVERSED = 'REVERSED'  # Платеж отменен
+    PARTIAL_REVERSED = 'PARTIAL_REVERSED'  # Платеж отменен частично
+    REFUNDED = 'REFUNDED'  # Возврат выполнен
+    PARTIAL_REFUNDED = 'PARTIAL_REFUNDED'  # Частичный возврат
+    REJECTED = 'REJECTED'  # Платеж отклонен
+    DEADLINE_EXPIRED = 'DEADLINE_EXPIRED'  # Срок жизни платежа истек
+    CHECKING_3DS = '3DS_CHECKING'  # Идет проверка 3DS
+    CHECKED_3DS = '3DS_CHECKED'  # Проверка 3DS завершена
+    FORM_SHOWED = 'FORM_SHOWED'  # Форма показана
