@@ -9,16 +9,16 @@ insertPartnerBonusesHistory = \
 
 selectPartnerBonusesHistoryByUserId = \
     f"SELECT {userPublicColumns}, partnerBonusesHistory.* FROM partnerBonusesHistory " \
-    "JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
+    "LEFT JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
     "WHERE userId = %s"
 selectPartnerBonusesHistoryByUserIdForLastMonth = \
     f"SELECT {userPublicColumns}, partnerBonusesHistory.* FROM partnerBonusesHistory " \
-    "JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
+    "LEFT JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
     "WHERE userId = %s " \
     "AND date > NOW() - INTERVAL '30 day'"
 selectTotalPartnerBonusesHistoryByUserIdForLastMonth = \
     "SELECT SUM(value) as total FROM partnerBonusesHistory " \
-    "JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
+    "LEFT JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
     "WHERE userId = %s " \
     "AND date > NOW() - INTERVAL '30 day'"
 

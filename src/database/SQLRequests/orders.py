@@ -43,7 +43,8 @@ selectOrderGoodsByOrderId = \
 
 updateOrderById = \
     "UPDATE orders " \
-    "SET addressId = %s, " \
+    "SET userId = %s, " \
+    "addressId = %s, " \
     "addressTextCopy = %s, " \
     "commentTextCopy = %s, " \
     "updatedDate = NOW(), " \
@@ -54,7 +55,8 @@ updateOrderById = \
 
 updateOrderByNumber = \
     "UPDATE orders " \
-    "SET addressId = %s, " \
+    "SET userId = %s, " \
+    "addressId = %s, " \
     "addressTextCopy = %s, " \
     "commentTextCopy = %s, " \
     "updatedDate = NOW(), " \

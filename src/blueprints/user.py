@@ -170,6 +170,7 @@ def userRegister():
         familyName = req['familyName']
         email = req['email']
         tel = req['tel']
+        city = req['city']
         password = req['password']
         clientBrowser = req.get('clientBrowser', 'Unknown browser')
         clientOS = req.get('clientOS', 'Unknown OS')
@@ -194,7 +195,7 @@ def userRegister():
 
     try:
         userData = DB.execute(SQLUser.insertUser,
-                              [tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, password, referrerId])
+                              [tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, city, password, referrerId])
     except Exception as err:
         return jsonResponse(f"Не удалось создать аккаунт. Внутренняя ошибка: {err.__repr__()}", HTTP_INTERNAL_ERROR)
 
@@ -295,7 +296,9 @@ def userUpdate(userData):
         email = req.get('email')
         avatarUrl = req.get('avatarUrl')
         tel = req.get('tel')
+        city = req.get('city')
         partnerStatus = req.get('partnerStatus')
+        referrerId = req.get('referrerId')
 
         isEmailNotificationsOn = req.get('isEmailNotificationsOn')
 
@@ -313,31 +316,35 @@ def userUpdate(userData):
     if str(userData['id']) != str(userId):
         if not userData['caneditusers']:
             return jsonResponse("Недостаточно прав доступа", HTTP_NO_PERMISSIONS)
-        userData = DB.execute(SQLUser.selectUserById, [userId])
+        targetUserData = DB.execute(SQLUser.selectUserById, [userId])
+    else:
+        targetUserData = userData
 
     if email: email = email.strip().lower()
     if givenName: givenName = givenName.strip()
     if familyName: familyName = familyName.strip()
     if middleName: middleName = middleName.strip()
 
-    isEmailChanged = email != userData['email']
+    isEmailChanged = email != targetUserData['email']
 
-    givenName = givenName or userData['givenname']
-    familyName = familyName or userData['familyname']
-    middleName = middleName or userData['middlename']
-    email = email or userData['email']
-    avatarUrl = avatarUrl or userData['avatarurl']
-    tel = tel or userData['tel']
-    isEmailNotificationsOn = isEmailNotificationsOn if 'isEmailNotificationsOn' in req else userData['isemailnotificationson']
-    tgUsername = tgUsername or userData['tgusername']
-    tgId = tgId or userData['tgid']
-    canEditOrders = canEditOrders or userData['caneditorders']
-    canEditUsers = canEditUsers or userData['caneditusers']
-    canEditGoods = canEditGoods or userData['caneditgoods']
-    canEditHistory = canEditHistory or userData['canedithistory']
-    canExecuteSQL = canExecuteSQL or userData['canexecutesql']
-    canEditGlobals = canEditGlobals or userData['caneditglobals']
-    partnerStatus = partnerStatus if 'partnerStatus' in req else userData['partnerstatus']
+    givenName = givenName or targetUserData['givenname']
+    familyName = familyName or targetUserData['familyname']
+    middleName = middleName or targetUserData['middlename']
+    email = email or targetUserData['email']
+    avatarUrl = avatarUrl or targetUserData['avatarurl']
+    tel = tel or targetUserData['tel']
+    city = city or targetUserData['city']
+    isEmailNotificationsOn = isEmailNotificationsOn if 'isEmailNotificationsOn' in req else targetUserData['isemailnotificationson']
+    tgUsername = tgUsername or targetUserData['tgusername']
+    tgId = tgId or targetUserData['tgid']
+    canEditOrders = canEditOrders if canEditOrders is not None else targetUserData['caneditorders']
+    canEditUsers = canEditUsers if canEditUsers is not None else targetUserData['caneditusers']
+    canEditGoods = canEditGoods if canEditGoods is not None else targetUserData['caneditgoods']
+    canEditHistory = canEditHistory if canEditHistory is not None else targetUserData['canedithistory']
+    canExecuteSQL = canExecuteSQL if canExecuteSQL is not None else targetUserData['canexecutesql']
+    canEditGlobals = canEditGlobals if canEditGlobals is not None else targetUserData['caneditglobals']
+    partnerStatus = partnerStatus if 'partnerStatus' in req else targetUserData['partnerstatus']
+    referrerId = referrerId if 'referrerId' in req else targetUserData['referrerid']
 
     email = email.strip().lower()
     tel = re.sub('^8', '+7', tel.strip().lower()).replace('(', '').replace(')', '').replace('-', '')
@@ -345,16 +352,17 @@ def userUpdate(userData):
     try:
         if userData['caneditusers']:
             resp = DB.execute(SQLUser.adminUpdateUserById,
-                              [tgUsername, tgId, givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl,
+                              [tgUsername, tgId, givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, city, referrerId,
                                canEditOrders, canEditUsers, canEditGoods,
                                canEditHistory, canExecuteSQL, canEditGlobals, partnerStatus, userId])
+            print(resp)
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
         else:
             if partnerStatus is True:
-                partnerStatus = userData['partnerStatus']
+                partnerStatus = targetUserData['partnerStatus']
             resp = DB.execute(SQLUser.updateUserById,
-                              [givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, partnerStatus, userId])
+                              [givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, city, partnerStatus, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
     except Exception as err:
@@ -396,12 +404,12 @@ def userDelete(userData):
 def usersGetAll(userData):
     try:
         req = request.args
-        search = req.get('search')
-        order = req.get('order')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
 
-    resp = DB.execute(SQLUser.selectUsersByFilters(req), manyResults=True)
+    resp = DB.execute(SQLUser.selectAllUsersWithOrdersCount, manyResults=True)
+    for row in resp:
+        row.pop('password', None)
     return jsonResponse({'users': resp})
 
 

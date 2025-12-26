@@ -6,7 +6,7 @@ from src.database.SQLRequests import orders as SQLOrders
 from src.database.SQLRequests import user as SQLUser
 from src.database.SQLRequests import partnerBonusesHistory as SQLPartnersBonusesHistory
 from src.database.databaseUtils import insertHistory
-from src.utils.access import login_required
+from src.utils.access import login_required, login_and_can_edit_partners_required
 from src.utils.utils import jsonResponse
 
 app = Blueprint('partners', __name__)
@@ -97,3 +97,22 @@ def getAllPartnerUsers(userData):
     partners = DB.execute(SQLPartnersBonusesHistory.selectPartnersAndBonusesByUserIdForLastMonth, [userId], manyResults=True)
 
     return jsonResponse({'partners': partners})
+
+@app.route("/history", methods=["POST"])
+@login_and_can_edit_partners_required
+def addHistoryRecord(userData):
+    try:
+        req = request.json
+        userId = req['userId']
+        value = req['value']
+        fromUserId = req.get('fromUserId')
+        orderId = req.get('orderId')
+        comment = req.get('comment')
+    except Exception as err:
+        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+
+
+    DB.execute(SQLUser.updateUserAddPartnerBonusesById, [value, userId])
+    history = DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [userId, fromUserId, value, orderId, comment])
+
+    return jsonResponse(history)

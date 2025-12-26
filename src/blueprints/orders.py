@@ -219,6 +219,7 @@ def updateOrderData(userData):
     try:
         req = request.json
         id = req.get('id')
+        userId = req.get('userId')
         number = req.get('number')
         addressId = req.get('addressId')
         addressTextCopy = req.get('addressTextCopy')
@@ -248,6 +249,7 @@ def updateOrderData(userData):
     if not orderData:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
 
+    if userId is None: userId = orderData['userid']
     if addressId is None: addressId = orderData['addressid']
     if addressTextCopy is None: addressTextCopy = orderData['addresstextcopy']
     if commentTextCopy is None: commentTextCopy = orderData['commenttextcopy']
@@ -256,9 +258,9 @@ def updateOrderData(userData):
 
     try:
         if id is not None:
-            updatedOrderData = DB.execute(SQLOrders.updateOrderById, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
+            updatedOrderData = DB.execute(SQLOrders.updateOrderById, [userId, addressId, addressTextCopy, commentTextCopy, status, trackingCode, id])
         elif number is not None:
-            updatedOrderData = DB.execute(SQLOrders.updateOrderByNumber, [addressId, addressTextCopy, commentTextCopy, status, trackingCode, number])
+            updatedOrderData = DB.execute(SQLOrders.updateOrderByNumber, [userId, addressId, addressTextCopy, commentTextCopy, status, trackingCode, number])
     except Exception as err:
         return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
 
