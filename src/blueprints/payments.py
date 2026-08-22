@@ -1,4 +1,7 @@
 import json
+import math
+import threading
+import time
 from flask import Blueprint
 import requests
 import urllib3
@@ -112,6 +115,98 @@ def sendPaymentRequest(url, params) -> PaymentResponse:
     except json.JSONDecodeError as err:
         raise Exception(f"Ошибка парсинга ответа Tinkoff: {err.__repr__()}")
 
+def getPaymentStatusUsingRequest(paymentId) -> PaymentStatuses:    
+    return sendPaymentRequest(
+        CONFIG.tbank.get_state_url, 
+        {
+            'TerminalKey': CONFIG.tbank.terminal_key,
+            'PaymentId': paymentId,
+        },
+    ).status
+
+def processChangingPaymentStatus(status: PaymentStatuses, order, user):
+    # Оплата заказа создана
+    if status == PaymentStatuses.NEW:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.new, order['id']])
+        print(f"Прилетело измнение статуса оплаты на 'NEW': order #{order['id']}, paymentId: {order['paymentid']}, status: {status}")
+    # Деньги для оплаты зарезервированы (только для двухстадийной оплаты)
+    elif status == PaymentStatuses.AUTHORIZED:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.authorized, order['id']])
+        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentAuthorized, order["number"])
+    # Деньги у клиента списаны
+    elif status == PaymentStatuses.CONFIRMED:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.confirmed, order['id']])
+        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentConfirmed, order["number"])
+    # Ошибка при оплате
+    elif status == PaymentStatuses.REJECTED:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.rejected, order['id']])
+        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentRejected, order["number"], order["id"])
+    # Клиент не успел завершить оплату в срок
+    elif status == PaymentStatuses.DEADLINE_EXPIRED:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.expired, order['id']])
+        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentExpired, order["number"], order["id"])
+    # Заказ не подтвержден после AUTHORIZED и оплата не списана (для двухстадийной оплаты) или заказ отменен до авторизации, после INIT (для любого типа оплаты)
+    elif status == PaymentStatuses.REVERSED or status == PaymentStatuses.PARTIAL_REVERSED or status == PaymentStatuses.CANCELLED:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.cancelled, order['id']])
+        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentCancelled, order["number"])
+    # Возврат по заказу успешно произведен
+    elif status == PaymentStatuses.REFUNDED or status == PaymentStatuses.PARTIAL_REFUNDED:
+        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.refunded, order['id']])
+        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderRefunded, order["number"])
+
+
+class OrderPollingThreadData:
+    thread: threading.Thread
+    awaitingForStatuses: list[PaymentStatuses] | None
+    def __init__(self, thread, awaitingForStatuses):
+        self.thread = thread
+        self.awaitingForStatuses = awaitingForStatuses
+
+ordersPollingThreads: dict[str, OrderPollingThreadData] = {}
+def startPollingForPayment(order, user, awaitingForStatuses: list[PaymentStatuses] = None):
+    # Если тред для этого заказа уже есть, убиваем его
+    existingThread = ordersPollingThreads.get(order['id'])
+    if existingThread is not None:
+        # TOOO: КАК-ТО УБИТЬ ПОТОК existingThread.thread
+        pass
+        
+    initialStatus = order['paymentstatus']
+    
+    def poll():
+        try:
+            status = getPaymentStatusUsingRequest(order['paymentid'])
+        except Exception as err:
+            print(f"Ошибка при поллинге статуса оплаты #{order['paymentid']} заказа #{order['id']}:", err);
+            return False
+        
+        # Если статус не поменялся - выходим
+        if status == initialStatus:
+            return False
+        
+        # Если поменялся - проверяем что на один из ожидаемых
+        if status not in awaitingForStatuses and awaitingForStatuses is not None:
+            print(f"Ошибка: При поллинге статуса оплаты #{order['paymentid']} заказа #{order['id']}, он изменился на {status}, хотя ожидался один из:", awaitingForStatuses);
+            return False
+        
+        # Если изменился на один из ожидаемых - обрабатываем изменение
+        print(f"✅ Cтатус оплаты #{order['paymentid']} заказа #{order['id']} изменился на {status}");
+        processChangingPaymentStatus(status, order, user)
+        return True
+    
+    def startPollingCycle():
+        attempts = 0
+        maxAttemts = math.ceil(CONFIG.tbank.max_order_pay_time_sec / CONFIG.tbank.payments_polling_interval_sec)
+        while attempts < maxAttemts:
+            if poll():  # Заканчиваем, если мы дождались смены статуса на один из нужных 
+                return
+            time.sleep(CONFIG.tbank.payments_polling_interval_sec)
+            attempts += 1
+
+    thread = threading.Thread(target=startPollingCycle, daemon=True)
+    thread.start()
+    # Сохраняем тред для возможности его отмены
+    ordersPollingThreads[order['id']] = OrderPollingThreadData(thread, awaitingForStatuses)
+    print(f"♻🚀 Started polling for payment #{order['paymentid']} order #{order['id']}")
 
 
 # Инициализация платежа при любом типе оплаты (и одно, и двух-стадийной)
@@ -309,21 +404,9 @@ def getPaymentState(userData):
     
     # 2. Отправляем запрос в Т-Банк
     try:
-        res = sendPaymentRequest(
-            CONFIG.tbank.get_state_url, 
-            {
-                'TerminalKey': CONFIG.tbank.terminal_key,
-                'PaymentId': order['paymentid'],
-            },
-        )
+        return getPaymentStatusUsingRequest(order['paymentid'])
     except Exception as err:
         return jsonResponse(str(err), HTTP_INTERNAL_ERROR)
-
-    # Отдаем статус
-    return jsonResponse({
-        'status': res.status,
-    })
-
 
 
 @app.route("/webhook", methods=["POST"])
@@ -341,13 +424,23 @@ def paymentsWebhook():
     myToken = generateToken(req)
     if myToken != token:
         print("ОШИБКА ВЕБХУКА: ТОКЕНЫ В ВЕБХУКЕ НЕ СОВПАДАЮТ")
-        return jsonResponse("Токен не прошёл проверку", HTTP_NO_PERMISSIONS);
+        return jsonResponse("Токен не прошёл проверку", HTTP_NO_PERMISSIONS)
     
     # 2. Доверяем данным. Получаем информацию о заказе
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
     if order is None:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
-    # 3. Получаем информацию о владельце заказа
+    
+    # 3. Завершаем потоки поллинга, если таковые были и ждали именно этот статус
+    if status != order['paymentstatus']:
+        existingThread = ordersPollingThreads.get(order['id'])
+        if existingThread is not None and \
+            status in existingThread.awaitingForStatuses and \
+            existingThread.awaitingForStatuses is not None:
+                # TOOO: КАК-ТО УБИТЬ ПОТОК existingThread.thread
+                pass
+    
+    # 4. Получаем информацию о владельце заказа
     user = DB.execute(SQLUser.selectUserById, [order['userid']])
     if user is None:
         return jsonResponse("Владелец заказа не найден", HTTP_NOT_FOUND)
@@ -359,33 +452,9 @@ def paymentsWebhook():
     )
     
     # 4. Обновляем статус заказа
-    # Оплата заказа создана
-    if status == PaymentStatuses.NEW:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.new, orderId])
-        print(f"Прилетело измнение статуса оплаты на 'NEW': order #{orderId}, paymentId: {paymentId}, status: {status}")
-    # Деньги для оплаты зарезервированы (только для двухстадийной оплаты)
-    elif status == PaymentStatuses.AUTHORIZED:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.authorized, orderId])
-        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentAuthorized, order["number"])
-    # Деньги у клиента списаны
-    elif status == PaymentStatuses.CONFIRMED:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.confirmed, orderId])
-        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentConfirmed, order["number"])
-    # Ошибка при оплате
-    elif status == PaymentStatuses.REJECTED:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.rejected, orderId])
-        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentRejected, order["number"], order["id"])
-    # Клиент не успел завершить оплату в срок
-    elif status == PaymentStatuses.DEADLINE_EXPIRED:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.expired, orderId])
-        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentExpired, order["number"], order["id"])
-    # Заказ не подтвержден после AUTHORIZED и оплата не списана (для двухстадийной оплаты) или заказ отменен до авторизации, после INIT (для любого типа оплаты)
-    elif status == PaymentStatuses.REVERSED or status == PaymentStatuses.PARTIAL_REVERSED or status == PaymentStatuses.CANCELLED:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.cancelled, orderId])
-        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderPaymentCancelled, order["number"])
-    # Возврат по заказу успешно произведен
-    elif status == PaymentStatuses.REFUNDED or status == PaymentStatuses.PARTIAL_REFUNDED:
-        DB.execute(SQLOrders.updateOrderPaymentStatusById, [OrderPaymentStatuses.refunded, orderId])
-        TgBot.sendMessage(user['tgid'], TgBotMessageTexts.orderRefunded, order["number"])
-        
+    # Если статус в базе уже такой, то пропускаем обработку смены статуса
+    if status == order['paymentstatus']:
+        return make_response("OK", HTTP_OK)
+    processChangingPaymentStatus(status, order, user)
+    
     return make_response("OK", HTTP_OK)

@@ -19,7 +19,8 @@ class TbankConfig:
     terminal_key: str
     terminal_password: str
     use_two_stage_payments: bool
-    max_order_pay_time_sec: int = 900  # 15 минут
+    payments_polling_interval_sec: int = 60  # 1 мин
+    max_order_pay_time_sec: int = 900  # 15 мин
     init_url: str = 'https://securepay.tinkoff.ru/v2/Init'
     confirm_url: str = 'https://securepay.tinkoff.ru/v2/Confirm'
     cancel_url: str = 'https://securepay.tinkoff.ru/v2/Cancel'
@@ -168,6 +169,7 @@ class Config:
                 tbank=TbankConfig(
                     terminal_key=get_required_env('TBANK_TERMINAL_KEY'),
                     terminal_password=get_required_env('TBANK_TERMINAL_PASSWORD'),
+                    payments_polling_interval_sec=int(get_env('PAYMENTS_POLLING_INTERVAL_SEC', '60')),
                     max_order_pay_time_sec=int(get_env('MAX_ORDER_PAY_TIME_SEC', '900')),
                     use_two_stage_payments=get_env('USE_TWO_STAGE_PAYMENTS', 'True').lower() == 'true',
                     init_url=get_env('TBANK_INIT_URL', 'https://securepay.tinkoff.ru/v2/Init'),
