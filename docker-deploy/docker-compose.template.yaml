@@ -25,8 +25,8 @@ services:
     restart: unless-stopped
     volumes:
       - ../.env:/app/.env:r
-      - ./images:/app/images:rwo
       - ./pg_backups:/app/pg_backups:r
+      - images-volume:/app/images:rwo
     depends_on:
       db:
         condition: service_healthy
@@ -55,8 +55,18 @@ services:
       - ./pg_data:/var/lib/postgresql/data:rwo
       - ./pg_backups:/pg_backups:w
     networks:
-       - backend-internal
+      - backend-internal
 
+# Создаем именованый volume, к которому потом подключимся из фронта
+volumes:
+  images-volume:
+    name: ${IMAGES_VOLUME_NAME}
+    driver: local
+    driver_opts:
+      type: none
+      device: ./images
+      o: bind
+  
 networks:
   backend-internal:
   front-back:
