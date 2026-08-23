@@ -7,6 +7,11 @@ insertCategory = \
 selectCategoriesAll = \
     "SELECT * FROM categories " \
     "ORDER BY id"
+    
+selectCategoriesAllWithImages = \
+    "SELECT categories.*, path as imagepath FROM categories " \
+    "LEFT JOIN images ON categories.imageid = images.id " \
+    "ORDER BY categories.id"
 
 selectCategoryById = \
     "SELECT * FROM categories " \

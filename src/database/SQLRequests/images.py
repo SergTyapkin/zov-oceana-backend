@@ -35,10 +35,10 @@ selectMaxImageSortingKeyByGoodsId = \
 
 # ------------------
 
-updateGoodsImageSortingKeyById = \
+updateGoodsImageSortingKeyByGoodsIdImageId = \
     "UPDATE goodsImages " \
     "SET sortingKey = %s " \
-    "WHERE id = %s"
+    "WHERE goodsId = %s AND imageId = %s"
 
 updateImageById = \
     "UPDATE images " \

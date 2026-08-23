@@ -56,7 +56,7 @@ def getGlobals():
         goodsData = DB.execute(SQLGoods.selectGoodsByIds(globalsData['goodsidsonlanding']), [], manyResults=True)
     else:
         goodsData = []
-    categoriesData = DB.execute(SQLCategories.selectCategoriesAll, [], manyResults=True)
+    categoriesData = DB.execute(SQLCategories.selectCategoriesAllWithImages, [], manyResults=True)
 
     for goodsOne in goodsData:
         prepareGoodsData(goodsOne, True, False)

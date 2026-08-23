@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS goodsImages (
     goodsId      INT NOT NULL REFERENCES goods(id) ON DELETE CASCADE ON UPDATE CASCADE,
     imageId      INT NOT NULL REFERENCES images(id) ON DELETE CASCADE ON UPDATE CASCADE,
     sortingKey   INT NOT NULL,
-    UNIQUE (goodsId, sortingKey),
+    -- UNIQUE (goodsId, sortingKey),
     UNIQUE (goodsId, imageId)
 );
 

@@ -1,9 +1,10 @@
+import os
 import random
 import string
 from io import BytesIO
 
 from PIL import Image
-from flask import Blueprint, Response
+from flask import Blueprint, Response, send_file
 
 from src.config import CONFIG
 from src.utils.access import *
@@ -22,22 +23,38 @@ MAX_SIZE = CONFIG.max_image_size_px
 @app.route("/<imageId>.<imageExt>")
 @app.route("/<imageId>")
 def imageGet(imageId, imageExt=None):
-    if not CONFIG.save_images_to_db:
+    # Вытаскиваем картинку из БД
+    if CONFIG.save_images_to_db:
+        if not imageId.isnumeric():
+            return jsonResponse("ID изображения должно быть целым числом", HTTP_INVALID_DATA)
+        resp = DB.execute(SQLImages.selectImageById, [imageId])
+        if (not resp) or ((imageExt is not None) and (resp['type'] != imageExt)):
+            return jsonResponse("Изображение не найдено", HTTP_NOT_FOUND)
+        # base64Data = resp['base64']
+        # imageBytes = base64.b64decode(base64Data)
+        imageBytes = resp['bytes']
+        imageLen = len(imageBytes)
+
+        res = Response(imageBytes, mimetype=f'image/{resp["type"]}')
+        res.headers['Content-Length'] = imageLen
+        return res
+    
+    # Вытаскиваем картинку из папки (только для DEBUG. В проде этим должен заниматься nginx)
+    if not CONFIG.debug:
         return jsonResponse("Конфигурацией сервера задано, что он не должен отдавать картинки. Настройте их как раздачу статики через сторонний сервер для статики", HTTP_INTERNAL_ERROR)
-
-    if not imageId.isnumeric():
-        return jsonResponse("ID изображения должно быть целым числом", HTTP_INVALID_DATA)
-    resp = DB.execute(SQLImages.selectImageById, [imageId])
-    if (not resp) or ((imageExt is not None) and (resp['type'] != imageExt)):
+    
+    filename = f"{imageId}.{imageExt}" if imageExt else imageId
+    
+    # Проверяем существование файла
+    fullpath = os.path.join(os.getcwd(), CONFIG.save_images_folder, filename)
+    if not os.path.exists(fullpath):
         return jsonResponse("Изображение не найдено", HTTP_NOT_FOUND)
-    # base64Data = resp['base64']
-    # imageBytes = base64.b64decode(base64Data)
-    imageBytes = resp['bytes']
-    imageLen = len(imageBytes)
-
-    res = Response(imageBytes, mimetype=f'image/{resp["type"]}')
-    res.headers['Content-Length'] = imageLen
-    return res
+    
+    # Отдаем файл
+    try:
+        return send_file(fullpath, mimetype=f'image/{imageExt}')
+    except Exception as e:
+        return jsonResponse(f"Ошибка при отдаче изображения: {str(e)}", HTTP_INTERNAL_ERROR)
 
 
 _leftLen = len('data:image/')
@@ -86,7 +103,7 @@ def imageGoodsUpload(userData):
         )
     else:
         chars = string.ascii_letters + string.digits
-        randomFileNameUid = ''.join(random.choice(chars) for _ in range(IMAGE_UID_GENERATE_LEN))
+        randomFileNameUid = ''.join(random.choice(chars) for _ in range(CONFIG.image_uid_generate_len))
         fileName = f"{userData['id']}_{randomFileNameUid}.{saveFormat.lower()}"
         saveFullPath = os.path.join(CONFIG.save_images_folder, fileName)
         img.save(saveFullPath, format=saveFormat, optimize=True, quality=85)

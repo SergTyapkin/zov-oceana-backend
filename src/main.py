@@ -90,14 +90,23 @@ def log_request(response):
     host = request.host.split(':', 1)[0]
     args = dict(request.args)
 
+    # Проверяем, не является ли ответ бинарным (изображение, файл и т.д.)
+    content_type = response.headers.get('Content-Type', '')
+    if content_type.startswith(('image/', 'application/octet-stream', 'video/', 'audio/')):
+        return response
+
+    # Ответ в режиме passthrough — не читаем
+    if not response.is_sequence:
+        return response
+
+    # Читаем тело только для текстовых ответов
     json = ''
     try:
         json = request.json
     except:
         pass
-
+    
     responseText = response.get_data().decode()
-
     log_params = [
         (timestamp, purple),
         (request.method, blue),

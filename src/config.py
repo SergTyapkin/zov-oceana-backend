@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional, Any
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 
 @dataclass
@@ -69,7 +69,7 @@ class AppConfig:
 
     # Картинки
     save_images_to_db: bool = False
-    save_images_folder: str = './images'
+    save_images_folder: str = 'images'
     max_image_size_px: int = 2048
     image_uid_generate_len: int = 30
 
@@ -124,17 +124,23 @@ class Config:
         # Загружаем .env из папки запуска
         env_path = Path.cwd() / '.env'
         if env_path.exists():
-            load_dotenv(env_path)
+            load_dotenv(env_path, override=True)
         else:
             print(f"⚠️ .env файл не найден в {env_path}")
 
         # Функция для получения переменной с приоритетом: .env > системный env
         def get_env(key: str, default: Optional[str] = None) -> Optional[str]:
-            # Сначала проверяем в os.environ (туда загрузился .env)
+            # Сначала проверяем .env файл
+            env_values = dotenv_values(Path.cwd() / '.env')
+            if key in env_values:
+                return env_values[key]
+            
+            # Затем os.environ 
             value = os.environ.get(key)
             if value is not None:
                 return value
-            # Если нет в .env, проверяем системный env (но он уже там же)
+            
+            # Если нет ни там, ни там, возвращаем дефолт
             return default
 
         # Функция для получения обязательной переменной
@@ -195,7 +201,7 @@ class Config:
                 ),
 
                 save_images_to_db=get_env('SAVE_IMAGES_TO_DB', 'False').lower() == 'true',
-                save_images_folder=get_env('SAVE_IMAGES_FOLDER', './images'),
+                save_images_folder=get_env('SAVE_IMAGES_FOLDER', 'images'),
                 max_image_size_px=int(get_env('MAX_IMAGE_SIZE_PX', '2048')),
                 image_uid_generate_len=int(get_env('IMAGE_UID_GENERATE_LEN', '30')),
 
@@ -230,6 +236,7 @@ class Config:
             print(f"   📦 Проект: {self._config.project_name}")
             print(f"   🗄️  БД: {self._config.db.user}@{self._config.db.host}:{self._config.db.port}/{self._config.db.name}")
             print(f"   🔑 T-Банк: {self._config.tbank.terminal_key}")
+            print(f"   🤖 TgBot включен: {self._config.telegram.bot_enabled}")
             print(f"   📧 Почта: {self._config.email.address}")
 
         except ValueError as e:

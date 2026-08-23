@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
     volumes:
       - ../.env:/app/.env:r
-      - ./images_data:/app/images:rwo
+      - ./images:/app/images:rwo
       - ./pg_backups:/app/pg_backups:r
     depends_on:
       db:

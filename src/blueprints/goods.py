@@ -138,6 +138,7 @@ def goodsUpdate(userData):
         isDelicates = req.get('isDelicates')
         isOnSale = req.get('isOnSale')
         characters = req.get('characters')
+        images = req.get('images')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
@@ -169,6 +170,11 @@ def goodsUpdate(userData):
         'goods',
         f'Update goods: {json.dumps(req)}'
     )
+    
+    # Обновляем сортировку картинок
+    if images is not None:
+        for image in images:
+            DB.execute(SQLImages.updateGoodsImageSortingKeyByGoodsIdImageId, [image['sortingKey'], id, image['id']])
 
     return jsonResponse(goods)
 
