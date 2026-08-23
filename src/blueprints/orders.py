@@ -39,11 +39,12 @@ def getOrder(userData):
         req = request.args
         orderId = req['orderId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
-    if order is None:
+    if not order:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
+    print("> ORDER:", order)
     if str(order['userid']) != str(userData['id']) and not userData['caneditorders']:
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
 
@@ -56,7 +57,7 @@ def getAllOrders(userData):
     try:
         req = request.args
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     orders = DB.execute(SQLOrders.selectAllOrdersWithUsers, [], manyResults=True)
     for order in orders:
@@ -70,7 +71,7 @@ def getUserOrders(userData):
         req = request.args
         userId = req['userId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userId) != str(userData['id']) and not userData['caneditorders']:
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
@@ -91,7 +92,7 @@ def createOrder(userData):
         addressId = req['addressId']
         goods = req['goods']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     try:
         for goodsOne in goods:
@@ -100,7 +101,7 @@ def createOrder(userData):
                 'amount' not in goodsOne:
                 return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if (str(userId) != str(userData['id'])) and (not userData['caneditorders']):
         return jsonResponse("Нет прав на создание заказов для другого пользователя", HTTP_NO_PERMISSIONS)
@@ -126,18 +127,18 @@ def createOrder(userData):
         (f", Код: {address['code']}" if address['code'] else '')
     commentTextCopy = address['comment']
     orderData = DB.execute(SQLOrders.insertOrder, [orderNumber, userId, addressId, addressTextCopy, commentTextCopy, randomSecretCode])
-    if orderData is None:
+    if not orderData:
         return jsonResponse("Не удалось создать заказ", HTTP_INTERNAL_ERROR)
 
     goodsArrayInfoText = ""
     for goodsOne in goods:
         goodsOneData = DB.execute(SQLGoods.selectGoodsById, [goodsOne['id']])
-        if goodsOneData is None:
+        if not goodsOneData:
             return jsonResponse(f"Товар #{goodsOne['id']} не найден", HTTP_NOT_FOUND)
 
         try:
             goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOneData['cost'], goodsOne['amount']])
-            if goodsInOrderData is None:
+            if not goodsInOrderData:
                 return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
         except:
             # Ошибка 409, товар уже добавлен
@@ -173,7 +174,7 @@ def createOrderByAdmin(userData):
         addressTextCopy = req['addressTextCopy']
         commentTextCopy = req['commentTextCopy']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     try:
         for goodsOne in goods:
@@ -182,7 +183,7 @@ def createOrderByAdmin(userData):
                 'amount' not in goodsOne:
                 return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     symbols = string.digits
     randomSecretCode = ''.join(random.choice(symbols) for _ in range(ORDER_SECRET_CODE_GENERATE_LEN))
@@ -190,17 +191,17 @@ def createOrderByAdmin(userData):
     maxOrderId = maxOrderId['maxid'] if maxOrderId and maxOrderId['maxid'] else 0
     orderNumber = (maxOrderId + 1) * ORDER_NUMBER_SEED % MAX_ORDER_NUMBER
     orderData = DB.execute(SQLOrders.insertOrder, [orderNumber, userId, None, addressTextCopy, commentTextCopy, randomSecretCode])
-    if orderData is None:
+    if not orderData:
         return jsonResponse("Не удалось создать заказ", HTTP_INTERNAL_ERROR)
 
     goodsArrayInfoText = ""
     for goodsOne in goods:
         goodsOneData = DB.execute(SQLGoods.selectGoodsById, [goodsOne['id']])
-        if goodsOneData is None:
+        if not goodsOneData:
             return jsonResponse(f"Товар #{goodsOne['id']} не найден", HTTP_NOT_FOUND)
 
         goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOne['cost'], goodsOne['amount']])
-        if goodsInOrderData is None:
+        if not goodsInOrderData:
             return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
 
         goodsArrayInfoText += f"*{goodsOneData['title']}*, {goodsOne['amount']}кг\n"
@@ -239,7 +240,7 @@ def updateOrderData(userData):
         trackingCode = req.get('trackingCode')
         goods = req.get('goods')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     try:
         for goodsOne in goods:
@@ -249,7 +250,7 @@ def updateOrderData(userData):
                 'amount' not in goodsOne:
                 return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     orderData = None
     if id is not None:
@@ -277,12 +278,12 @@ def updateOrderData(userData):
         elif number is not None:
             updatedOrderData = DB.execute(SQLOrders.updateOrderByNumber, [userId, addressId, addressTextCopy, commentTextCopy, status, paymentStatus, paymentUrl, paymentQrData, paymentId, trackingCode, number])
     except Exception as err:
-        return jsonResponse(f"Не удалось изменить заказ {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось изменить заказ {str(err)}", HTTP_INVALID_DATA)
 
     DB.execute(SQLOrders.deleteAllOrderGoodsByOrderId, [updatedOrderData['id']])
     for goodsOne in goods:
         goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOne['cost'], goodsOne['amount']])
-        if goodsInOrderData is None:
+        if not goodsInOrderData:
             return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
 
 
@@ -350,7 +351,7 @@ def deleteOrder(userData):
         req = request.json
         orderId = req['orderId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     orderData = DB.execute(SQLOrders.selectOrderById, [orderId])
     if not orderData:

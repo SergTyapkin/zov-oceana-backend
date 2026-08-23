@@ -71,7 +71,7 @@ def userAuthByTg():
         clientBrowser = req.get('clientBrowser', 'Unknown browser')
         clientOS = req.get('clientOS', 'Unknown OS')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if not check_tg_auth_hash(tgId, tgFirstName, tgLastName, tgUsername, tgPhotoUrl, tgAuthDate, tgHash):
         return jsonResponse("Хэш авторизации TG не совпадает с данными", HTTP_INVALID_AUTH_DATA)
@@ -105,7 +105,7 @@ def userAuthByDefault():
         clientBrowser = req.get('clientBrowser', 'Unknown browser')
         clientOS = req.get('clientOS', 'Unknown OS')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     emailOrTel = emailOrTel.strip().lower()
     password = hash_sha256(password)
@@ -129,7 +129,7 @@ def userAuthByCodeTg():
         clientBrowser = req.get('clientBrowser', 'Unknown browser')
         clientOS = req.get('clientOS', 'Unknown OS')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     resp = DB.execute(SQLUser.selectSecretCodeByCodeType, [secretCode, 'auth'])
     if not resp:
@@ -175,7 +175,7 @@ def userRegister():
         clientBrowser = req.get('clientBrowser', 'Unknown browser')
         clientOS = req.get('clientOS', 'Unknown OS')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     email = email.strip().lower()
     tel = re.sub('^8', '+7', tel.strip().lower()).replace('(', '').replace(')', '').replace('-', '')
@@ -197,7 +197,7 @@ def userRegister():
         userData = DB.execute(SQLUser.insertUser,
                               [tgId, tgUsername, tgPhotoUrl, email, tel, familyName, givenName, middleName, city, password, referrerId])
     except Exception as err:
-        return jsonResponse(f"Не удалось создать аккаунт. Внутренняя ошибка: {err.__repr__()}", HTTP_INTERNAL_ERROR)
+        return jsonResponse(f"Не удалось создать аккаунт. Внутренняя ошибка: {str(err)}", HTTP_INTERNAL_ERROR)
 
     insertHistory(
         userData['id'],
@@ -213,7 +213,7 @@ def userSessionDelete(userData):
     try:
         DB.execute(SQLUser.deleteSessionByToken, [userData['session_token']])
     except Exception as err:
-        return jsonResponse(f"Сессия не удалена: {err.__repr__()}", HTTP_INTERNAL_ERROR)
+        return jsonResponse(f"Сессия не удалена: {str(err)}", HTTP_INTERNAL_ERROR)
 
     res = jsonResponse("Вы вышли из аккаунта")
     res.set_cookie("session_token", "", max_age=-1, httponly=True, samesite="none", secure=True)
@@ -232,7 +232,7 @@ def userAnotherSessionsDelete(userData):
     try:
         DB.execute(SQLUser.deleteAllUserSessionsWithoutCurrent, [userData['id'], userData['session_token']])
     except Exception as err:
-        return jsonResponse(f"Сессия не удалена: {err.__repr__()}", HTTP_INTERNAL_ERROR)
+        return jsonResponse(f"Сессия не удалена: {str(err)}", HTTP_INTERNAL_ERROR)
 
     res = jsonResponse("Вы вышли из аккаунта")
     insertHistory(
@@ -267,7 +267,7 @@ def userGet(userData):
         req = request.args
         userId = req.get('id')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if userId is None:  # return self user data
         if userData is None:
@@ -311,7 +311,7 @@ def userUpdate(userData):
         canExecuteSQL = req.get('canExecuteSQL')
         canEditGlobals = req.get('canEditGlobals')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId):
         if not userData['caneditusers']:
@@ -384,7 +384,7 @@ def userDelete(userData):
         req = request.json
         userId = req['userId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if (str(userData['id']) != str(userId)) and (not userData['caneditusers']):
         return jsonResponse("Недостаточно прав доступа", HTTP_NO_PERMISSIONS)
@@ -405,7 +405,7 @@ def usersGetAll(userData):
     try:
         req = request.args
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     resp = DB.execute(SQLUser.selectAllUsersWithOrdersCount, manyResults=True)
     for row in resp:
@@ -442,7 +442,7 @@ def userConfirmEmail():
         req = request.json
         code = req['code']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     resp = DB.execute(SQLUser.updateUserConfirmationBySecretcodeType, [code, "email"])
     if not resp:
@@ -465,7 +465,7 @@ def userUpdatePassword(userId):
         oldPassword = req['oldPassword']
         newPassword = req['newPassword']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     oldPassword = hash_sha256(oldPassword)
     newPassword = hash_sha256(newPassword)

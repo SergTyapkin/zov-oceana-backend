@@ -57,7 +57,7 @@ def getUserBonusesHistory(userData):
         req = request.args
         userId = req['userId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userId) != str(userData['id']) and not userData['caneditpartners']:
         return jsonResponse("Нет прав на просмотр партнерских бонусов другого пользователя", HTTP_NO_PERMISSIONS)
@@ -73,7 +73,7 @@ def getUserBonusesHistoryMonthly(userData):
         req = request.args
         userId = req['userId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userId) != str(userData['id']) and not userData['caneditpartners']:
         return jsonResponse("Нет прав на просмотр партнерских бонусов другого пользователя", HTTP_NO_PERMISSIONS)
@@ -89,7 +89,7 @@ def getAllPartnerUsers(userData):
         req = request.args
         userId = req['userId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userId) != str(userData['id']) and not userData['caneditpartners']:
         return jsonResponse("Нет прав на просмотр партнерских бонусов другого пользователя", HTTP_NO_PERMISSIONS)
@@ -109,7 +109,7 @@ def addHistoryRecord(userData):
         orderId = req.get('orderId')
         comment = req.get('comment')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
 
     DB.execute(SQLUser.updateUserAddPartnerBonusesById, [value, userId])

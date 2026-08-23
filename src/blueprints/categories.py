@@ -15,7 +15,7 @@ def categoriesGet():
     # try:
         # req = request.args
     # except Exception as err:
-    #     return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+    #     return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     # get all categories list
     categories = DB.execute(SQLCategories.selectCategoriesAll, [], manyResults=True)
@@ -31,7 +31,7 @@ def categoryCreate(userData):
         description = req.get('description')
         imageId = req.get('imageId')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     category = DB.execute(SQLCategories.insertCategory, [title, description, imageId])
 
@@ -54,10 +54,10 @@ def categoryUpdate(userData):
         description = req.get('description')
         imageId = req.get('imageId')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     categoryData = DB.execute(SQLCategories.selectCategoryById, [id])
-    if categoryData is None:
+    if not categoryData:
         return jsonResponse("Категория не найдена", HTTP_NOT_FOUND)
 
     if title is None: title = categoryData['title']
@@ -82,7 +82,7 @@ def categoryDelete(userData):
         req = request.json
         id = req['id']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     DB.execute(SQLCategories.deleteCategoryById, [id])
 

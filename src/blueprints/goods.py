@@ -32,9 +32,11 @@ def goodsGet():
         req = request.args
         id = req['id']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     goodsData = DB.execute(SQLGoods.selectGoodsById, [id])
+    if not goodsData:
+        return jsonResponse("Товар не найден", HTTP_NOT_FOUND)
     prepareGoodsData(goodsData)
 
     return jsonResponse(goodsData)
@@ -54,7 +56,7 @@ def goodsGetAll(userData):
         fromLocation = req.get('fromLocation')
         limit = req.get('limit')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     print((req.get('isOnSale') != 'false') or not (userData and userData['caneditgoods']))
     goods = DB.execute(SQLGoods.selectGoods(req, userData and userData['caneditgoods']), [], manyResults=True)
@@ -80,7 +82,7 @@ def goodsCreate(userData):
         isOnSale = True if req.get('isOnSale') is None else req.get('isOnSale')
         characters = req.get('characters')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     try:
         characters = json.dumps(characters)
@@ -105,7 +107,7 @@ def addGoodsToCategory(userData):
         goodsId = req['goodsId']
         categoryId = req['categoryId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     goods = DB.execute(SQLGoods.insertGoodsCategories, [goodsId, categoryId])
 
@@ -137,10 +139,10 @@ def goodsUpdate(userData):
         isOnSale = req.get('isOnSale')
         characters = req.get('characters')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     goodsData = DB.execute(SQLGoods.selectGoodsById, [id])
-    if goodsData is None:
+    if not goodsData:
         return jsonResponse("Товар не найден", HTTP_NOT_FOUND)
 
     try:
@@ -178,7 +180,7 @@ def goodsDelete(userData):
         req = request.json
         id = req['id']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     DB.execute(SQLGoods.deleteGoodsById, [id])
 
@@ -200,7 +202,7 @@ def deleteGoodsFromCategory(userData):
         goodsId = req['goodsId']
         categoryId = req['categoryId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     DB.execute(SQLGoods.deleteGoodsCategoriesByGoodsIdCategoryId, [goodsId, categoryId])
 

@@ -143,7 +143,9 @@ CREATE TABLE IF NOT EXISTS orders (
     paymentId       TEXT DEFAULT NULL,
     paymentUrl      TEXT DEFAULT NULL,
     paymentQrData   TEXT DEFAULT NULL,
-    paymentCreatedDate TIMESTAMP WITH TIME ZONE DEFAULT NULL
+    paymentCreatedDate TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    paymentRoute    TEXT DEFAULT NULL,
+    paymentSource   TEXT DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS ordersGoods (
     id              SERIAL PRIMARY KEY,

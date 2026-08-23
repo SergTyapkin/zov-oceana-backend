@@ -17,7 +17,7 @@ def executeSQL(userData):
         req = request.json
         sqlText = req['sql']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     try:
         resp = DB.execute(sqlText, manyResults=True)
@@ -39,7 +39,7 @@ def getSQLHistory(userData):
         req = request.args
         limit = req.get('limit')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     resp = DB.execute(SQLHistory.selectHistory(req | {"type": "sql"}), manyResults=True)
 
@@ -52,7 +52,7 @@ def deleteSQLHistory(userData):
         req = request.json
         id = req["id"]
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     DB.execute(SQLHistory.deleteHistoryById, [id])
 

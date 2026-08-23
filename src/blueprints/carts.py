@@ -18,7 +18,7 @@ def cartsGet(userData):
         req = request.args
         userId = req['userId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать корзину другого пользователя', HTTP_NO_PERMISSIONS)
@@ -40,7 +40,7 @@ def addGoodsToCart(userData):
         goodsId = req['goodsId']
         amount = req['amount']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав добавлять товары в корзину другого пользователя', HTTP_NO_PERMISSIONS)
@@ -48,7 +48,7 @@ def addGoodsToCart(userData):
     try:
         cart = DB.execute(SQLCarts.insertGoodsInCart, [goodsId, userId, amount])
     except Exception as err:
-        return jsonResponse(f"Не удалось добавить товар. Скорее всего он уже добавлен: {err.__repr__()}", HTTP_DATA_CONFLICT)
+        return jsonResponse(f"Не удалось добавить товар. Скорее всего он уже добавлен: {str(err)}", HTTP_DATA_CONFLICT)
 
     insertHistory(
         userData['id'],
@@ -66,7 +66,7 @@ def setGoodsInCart(userData):
         userId = req['userId']
         goods = req['goods']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     try:
         for goodsOne in goods:
@@ -75,7 +75,7 @@ def setGoodsInCart(userData):
                 'amount' not in goodsOne:
                 return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав добавлять товары в корзину другого пользователя', HTTP_NO_PERMISSIONS)
@@ -85,7 +85,7 @@ def setGoodsInCart(userData):
         try:
             DB.execute(SQLCarts.insertGoodsInCart, [goodsOne['id'], userId, goodsOne['amount']])
         except Exception as err:
-            print(f"(Warning) Не удалось добавить товар. Скорее всего он уже добавлен: {err.__repr__()}")
+            print(f"(Warning) Не удалось добавить товар. Скорее всего он уже добавлен: {str(err)}")
 
     insertHistory(
         userData['id'],
@@ -105,10 +105,10 @@ def updateGoodsInCartAmount(userData):
         goodsId = req['goodsId']
         amount = req['amount']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     goods = DB.execute(SQLCarts.selectGoodsInCartByUserIdGoodsId, [userId, goodsId])
-    if goods is None:
+    if not goods:
         return jsonResponse("Товар в корзине не найден", HTTP_NOT_FOUND)
 
     if str(userId) != str(userData['id']) and userData['caneditusers'] is None:
@@ -133,7 +133,7 @@ def deleteGoodsFromCart(userData):
         userId = req['userId']
         goodsIds = req['goodsIds']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userId) != str(userData['id']) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав менять корзину другого пользователя', HTTP_NO_PERMISSIONS)

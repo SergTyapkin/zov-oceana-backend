@@ -21,12 +21,12 @@ app = Blueprint('payments', __name__)
 
 class PaymentResponse:
     # Default fields for all responses types
-    id: str
     success: bool
     errorCode: str
-    message: str
+    message: str | None
     details: str | None
-    orderId: str
+    id: str | None
+    orderId: str | None
     
     # Special responses types fields
     status: PaymentStatuses | None # Init, Cancel, Confirm, GetState
@@ -35,22 +35,36 @@ class PaymentResponse:
     # RebillId: str | None         # Confirm, Cancel
     # CardId: str | None           # Confirm, Cancel
     qrData: str | None             # GetQR
+    route: str | None              # GetState
+    source: str | None             # GetState
     
     def __init__(self, response):
         data = response.json()
         print("> PAYMENT RESPONSE FROM TINKOFF:", data)
         
-        self.id = data['PaymentId']
-        self.orderId = data['OrderId']
         self.success = data['Success']
         self.errorCode = data['ErrorCode']
-        self.details = data.get('Details')
-        self.message = data['Message']
+        self.message = data.get('Message') # В случае ошибки
+        self.details = data.get('Details') # В случае ошибки
+        self.id = data.get('PaymentId') # в случае успеха
+        self.orderId = data.get('OrderId', '').split('_')[0] # в случае успеха
         
+        # Special responses types fields
         self.status = data.get('Status')
         self.paymentUrl = data.get('PaymentURL')
         self.amount = data.get('Amount')
         self.qrData = data.get('Data')
+        
+        self.route = None
+        self.source = None
+        params: list[dict[str, str]] = data.get('Params')
+        if params:
+            for param in params: # Проходимся по списку параметров
+                # Если находим нужный Key, записываем себе его Value
+                if param['Key'] == 'Route':
+                    self.route = param['Value']
+                elif param['Key'] == 'Source':
+                    self.source = param['Value']
         
 
 def getOrderGoods(orderData):
@@ -80,6 +94,7 @@ def generateToken(params):
 
 def sendPaymentRequest(url, params) -> PaymentResponse:
     params['Token'] = generateToken(params)
+    print(f">> Send request to: {url}, params: {params}")
     
     try:
         # Отпрвляем POST запрос на заданный url с заданным телом
@@ -104,25 +119,25 @@ def sendPaymentRequest(url, params) -> PaymentResponse:
         # Проверяем успешность
         res = PaymentResponse(response)
         if not res.success:
-            raise Exception(f"Ошибка Tinkoff при создании платежа: {res.message} (Код: {res.errorCode})")
+            raise Exception(f"Ошибка Tinkoff: {res.message}; {res.details} (Код: {res.errorCode})")
         
         # Если всё в порядке - возвращаем структуру с данными
         return res
     except requests.exceptions.Timeout as err:
-        raise Exception(f"Превышено время ожидания ответа от Tinkoff: {err.__repr__()}")
+        raise Exception(f"Превышено время ожидания ответа от Tinkoff: {str(err)}")
     except requests.exceptions.RequestException as err:
-        raise Exception(f"Ошибка запроса к Tinkoff: {err.__repr__()}")
+        raise Exception(f"Ошибка запроса к Tinkoff: {str(err)}")
     except json.JSONDecodeError as err:
-        raise Exception(f"Ошибка парсинга ответа Tinkoff: {err.__repr__()}")
+        raise Exception(f"Ошибка парсинга ответа Tinkoff: {str(err)}")
 
-def getPaymentStatusUsingRequest(paymentId) -> PaymentStatuses:    
+def getPaymentStateUsingRequest(paymentId) -> PaymentStatuses:    
     return sendPaymentRequest(
         CONFIG.tbank.get_state_url, 
         {
             'TerminalKey': CONFIG.tbank.terminal_key,
             'PaymentId': paymentId,
         },
-    ).status
+    )
 
 def processChangingPaymentStatus(status: PaymentStatuses, order, user):
     # Оплата заказа создана
@@ -158,54 +173,70 @@ def processChangingPaymentStatus(status: PaymentStatuses, order, user):
 class OrderPollingThreadData:
     thread: threading.Thread
     awaitingForStatuses: list[PaymentStatuses] | None
-    def __init__(self, thread, awaitingForStatuses):
+    stop_flag: threading.Event
+    def __init__(self, thread, awaitingForStatuses, stop_flag):
         self.thread = thread
         self.awaitingForStatuses = awaitingForStatuses
+        self.stop_flag = stop_flag
 
 ordersPollingThreads: dict[str, OrderPollingThreadData] = {}
 def startPollingForPayment(order, user, awaitingForStatuses: list[PaymentStatuses] = None):
     # Если тред для этого заказа уже есть, убиваем его
     existingThread = ordersPollingThreads.get(order['id'])
     if existingThread is not None:
-        # TOOO: КАК-ТО УБИТЬ ПОТОК existingThread.thread
-        pass
+        existingThread.stop_flag.set()  # Устанавливаем флаг остановки
+        # existingThread.thread.join()  # Ждем завершения
+        del ordersPollingThreads[order['id']]  # Удаляем из словаря
         
     initialStatus = order['paymentstatus']
     
     def poll():
+        # Проверяем флаг завершения
+        if stop_flag.is_set():
+            return False
+        
         try:
-            status = getPaymentStatusUsingRequest(order['paymentid'])
+            payment = getPaymentStateUsingRequest(order['paymentid'])
         except Exception as err:
             print(f"Ошибка при поллинге статуса оплаты #{order['paymentid']} заказа #{order['id']}:", err);
             return False
         
+        # Если поменялись Route или Source - сохраняем их в базе
+        if order['paymentroute'] != payment.route or order['paymentsource'] != payment.source:
+            DB.execute(SQLOrders.updateOrderPaymentRouteSourceById, [payment.route, payment.source, order['id']])
+        
         # Если статус не поменялся - выходим
-        if status == initialStatus:
+        if payment.status == initialStatus:
             return False
         
         # Если поменялся - проверяем что на один из ожидаемых
-        if status not in awaitingForStatuses and awaitingForStatuses is not None:
-            print(f"Ошибка: При поллинге статуса оплаты #{order['paymentid']} заказа #{order['id']}, он изменился на {status}, хотя ожидался один из:", awaitingForStatuses);
+        if payment.status not in awaitingForStatuses and awaitingForStatuses is not None:
+            print(f"Ошибка: При поллинге статуса оплаты #{order['paymentid']} заказа #{order['id']}, он изменился на {payment.status}, хотя ожидался один из:", awaitingForStatuses);
             return False
         
         # Если изменился на один из ожидаемых - обрабатываем изменение
-        print(f"✅ Cтатус оплаты #{order['paymentid']} заказа #{order['id']} изменился на {status}");
-        processChangingPaymentStatus(status, order, user)
+        print(f"✅ Cтатус оплаты #{order['paymentid']} заказа #{order['id']} изменился на {payment.status}");
+        processChangingPaymentStatus(payment.status, order, user)
         return True
     
     def startPollingCycle():
         attempts = 0
         maxAttemts = math.ceil(CONFIG.tbank.max_order_pay_time_sec / CONFIG.tbank.payments_polling_interval_sec)
         while attempts < maxAttemts:
+            if stop_flag.is_set():
+                print(f"⏹️ Поллинг для платежа #{order['paymentid']} заказа #{order['id']} принудительно остановлен")
+                return
+            
             if poll():  # Заканчиваем, если мы дождались смены статуса на один из нужных 
                 return
             time.sleep(CONFIG.tbank.payments_polling_interval_sec)
             attempts += 1
 
+    stop_flag = threading.Event()
     thread = threading.Thread(target=startPollingCycle, daemon=True)
     thread.start()
     # Сохраняем тред для возможности его отмены
-    ordersPollingThreads[order['id']] = OrderPollingThreadData(thread, awaitingForStatuses)
+    ordersPollingThreads[order['id']] = OrderPollingThreadData(thread, awaitingForStatuses, stop_flag)
     print(f"♻🚀 Started polling for payment #{order['paymentid']} order #{order['id']}")
 
 
@@ -217,11 +248,11 @@ def createPayment(userData):
         req = request.json
         orderId = req['orderId']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
     
     # 0. Получаем данные заказа
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
-    if order is None:
+    if not order:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
     if str(order['userid']) != str(userData['id']) and not userData['caneditorders']:
         return jsonResponse("Нет прав на просмотр заказов другого пользователя", HTTP_NO_PERMISSIONS)
@@ -238,7 +269,7 @@ def createPayment(userData):
     params = {
         'TerminalKey': CONFIG.tbank.terminal_key,
         'Amount': round(total_cost),
-        'OrderId': order['id'],
+        'OrderId': f'{order['id']}_{time.ctime().replace(' ', '-')}', # Добвляем к id заказа текущее время после _. В ответах от тинькоффа мы отрезаем время и получаем чистое id
         'Description': f"Оплата заказа №{order['number']} на сайте {CONFIG.deploy_short_url}",
         'CustomerKey': str(userData['id']),
         'Language': 'ru',
@@ -264,7 +295,7 @@ def createPayment(userData):
             'Price': price,
             'Quantity': quantity,
             'Amount': amount,
-            'Tax': CONFIG.goods_tax_delicates if goods['isdelicates'] else CONFIG.goods_tax_delicates,  # Обычная НДС для всех товаров и 22% для деликатесов
+            'Tax': CONFIG.goods_tax_delicates if goods['isdelicates'] else CONFIG.goods_tax_default,  # Обычная НДС для всех товаров и 22% для деликатесов
             'PaymentMethod': 'full_payment',  # Полная оплата (не частичная и не кредит)
             'PaymentObject': 'commodity' # Говорим что продаем товар, а не услугу и др
         })
@@ -302,7 +333,7 @@ def createPayment(userData):
     
     # Обновляем статус оплаты заказа
     try:
-        orderData = DB.execute(SQLOrders.updateOrderPaymentIdUrlStatusQrdataById, [res.id, res.paymentUrl, res.status, qrRes.qrData, res.orderId])
+        orderData = DB.execute(SQLOrders.updateOrderPaymentIdUrlStatusQrdataById, [res.id, res.paymentUrl, OrderPaymentStatuses.new, qrRes.qrData, res.orderId])
     except:
         return jsonResponse("По id заказа в ответе от тинькоффа заказ в базе не найден", HTTP_INTERNAL_ERROR)
     
@@ -311,8 +342,21 @@ def createPayment(userData):
         'payment',
         f'Creates payment for order #{orderId}, paymentId: {res.id}, status: {res.status}, success: {res.success}'
     )
+    
+    # 6. Запускаем поллинг для того, чтобы узнать когда пройдет оплата, если вебхук не сработает
+    startPollingForPayment(
+        orderData,
+        userData,
+        [
+            PaymentStatuses.AUTHORIZED,
+            PaymentStatuses.CONFIRMED,
+            PaymentStatuses.REJECTED,
+            PaymentStatuses.CANCELLED,
+            PaymentStatuses.DEADLINE_EXPIRED,
+        ]
+    )
         
-    # 6. Возвращаем фронту данные заказа и в них url и qr для оплаты
+    # 7. Возвращаем фронту данные заказа и в них url и qr для оплаты
     return jsonResponse(orderData)
 
 
@@ -320,16 +364,24 @@ def createPayment(userData):
 def confirmOrCancelPayment(userData, orderId, amount: int = None, isCancel=False):
     # 0. Получаем данные заказа
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
-    if order is None:
+    if not order:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
     if order['paymentid'] is None:
         return jsonResponse("Оплата для заказа ещё не была создана", HTTP_INTERNAL_ERROR)
+    if not isCancel and order['paymentstatus'] != OrderPaymentStatuses.authorized:
+        return jsonResponse("Платёж ещё не был авторизован (средства клиента ещё не заморожены)", HTTP_DATA_CONFLICT)
+        
 
     # 1. Формируем параметры запроса
     params = {
         'TerminalKey': CONFIG.tbank.terminal_key,
         'PaymentId': order['paymentid'],
     }
+    if not isCancel: # Добавляем в Confirm поля route и source, если они есть в базе
+        if order['paymentroute'] is not None:
+            params['Route'] = order['paymentroute']
+        if order['paymentsource'] is not None:
+            params['Source'] = order['paymentsource']
     if amount is not None:
         params['Amount'] = amount
 
@@ -343,9 +395,19 @@ def confirmOrCancelPayment(userData, orderId, amount: int = None, isCancel=False
         return jsonResponse(str(err), HTTP_INTERNAL_ERROR)
 
     # Проверяем статус оплаты в ответе
-    targetStatus = PaymentStatuses.REVERSED if isCancel else PaymentStatuses.CONFIRMED
+    if isCancel:
+        if order['paymentstatus'] == OrderPaymentStatuses.authorized:
+            targetStatus = PaymentStatuses.REVERSED
+        elif order['paymentstatus'] == OrderPaymentStatuses.confirmed:
+            targetStatus = PaymentStatuses.REFUNDED
+        elif order['paymentstatus'] == OrderPaymentStatuses.new:
+            targetStatus = PaymentStatuses.CANCELLED
+        else:
+            return jsonResponse("Попытка вернуть платёж в состоянии не AUTHORIZED / CONFIRMED / NEW", HTTP_INTERNAL_ERROR)
+    else:
+        targetStatus = PaymentStatuses.CONFIRMED
     if res.status != targetStatus:
-        return jsonResponse(f"Ошибка создания платежа: статус платежа на стороне тинькофф не {targetStatus}, а {res.Status}", HTTP_INTERNAL_ERROR)
+        return jsonResponse(f"Ошибка создания платежа: статус платежа на стороне тинькофф не {targetStatus}, а {res.status}", HTTP_INTERNAL_ERROR)
     
     insertHistory(
         userData['id'],
@@ -353,7 +415,22 @@ def confirmOrCancelPayment(userData, orderId, amount: int = None, isCancel=False
         f'{'Cancel' if isCancel else 'Confirm'} payment for order #{orderId}, paymentId: {res.id}, status: {res.status}, success: {res.success}'
     )
     
-    # 3. Отвечаем что всё ок
+    # 3. Запускаем поллинг для того, чтобы узнать когда пройдет оплата, если вебхук не сработает
+    startPollingForPayment(
+        order,
+        userData,
+        [
+            PaymentStatuses.CANCELLED, # из NEW
+            PaymentStatuses.REVERSED, # из AUTHORIZED
+            PaymentStatuses.PARTIAL_REVERSED, # из AUTHORIZED
+            PaymentStatuses.REFUNDED, # из CONFIRMED
+            PaymentStatuses.PARTIAL_REFUNDED, # из CONFIRMED
+        ]  if isCancel else [
+            PaymentStatuses.CONFIRMED,
+        ],
+    )
+    
+    # 4. Отвечаем что всё ок
     return jsonResponse(f"Оплата {'отменена' if isCancel else 'подтверждена'}")
 
 @app.route("/confirm", methods=["POST"])
@@ -364,19 +441,27 @@ def confirmPayment(userData):
         orderId = req['orderId']
         amount = req.get('amount')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
-    confirmOrCancelPayment(userData, orderId, amount, False)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
+    return confirmOrCancelPayment(userData, orderId, amount, False)
 
 @app.route("/cancel", methods=["POST"])
 @login_and_can_edit_orders_required
-def confirmPayment(userData):
+def cancelPayment(userData):
     try:
         req = request.json
         orderId = req['orderId']
         amount = req.get('amount')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
-    confirmOrCancelPayment(userData, orderId, amount, True)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
+    
+    # Если тред для этого заказа уже есть, убиваем его
+    existingThread = ordersPollingThreads.get(orderId)
+    if existingThread is not None:
+        existingThread.stop_flag.set()  # Устанавливаем флаг остановки
+        # existingThread.thread.join()  # Ждем завершения
+        del ordersPollingThreads[orderId]  # Удаляем из словаря
+    
+    return confirmOrCancelPayment(userData, orderId, amount, True)
 
 
 @app.route("", methods=["GET"])
@@ -386,25 +471,25 @@ def getPaymentState(userData):
         req = request.args
         orderId = req['orderId']
     except Exception as err:
-        return jsonResponse(f"Не удаgлось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удаgлось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
     
     # 0. Получаем данные заказа
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
-    if order is None:
+    if not order:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
     if order['paymentid'] is None:
         return jsonResponse("Оплата для заказа ещё не была создана", HTTP_INTERNAL_ERROR)
     
     # 1. Получаем данные пользователя и проверяем права
     user = DB.execute(SQLUser.selectUserById, [order['userid']])
-    if user is None:
+    if not user:
         return jsonResponse("Владелец зказа не найден", HTTP_NOT_FOUND)
     if user['id'] != userData['id'] and not userData['caneditorders']:
         return jsonResponse("Нет прав для просмотра статуса оплаты другого пользователя", HTTP_NO_PERMISSIONS)
     
     # 2. Отправляем запрос в Т-Банк
     try:
-        return getPaymentStatusUsingRequest(order['paymentid'])
+        return getPaymentStateUsingRequest(order['paymentid'])
     except Exception as err:
         return jsonResponse(str(err), HTTP_INTERNAL_ERROR)
 
@@ -418,7 +503,7 @@ def paymentsWebhook():
         status = req['Status']
         token = req['Token']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
     
     # 1. Проверяем токен
     myToken = generateToken(req)
@@ -428,7 +513,7 @@ def paymentsWebhook():
     
     # 2. Доверяем данным. Получаем информацию о заказе
     order = DB.execute(SQLOrders.selectOrderById, [orderId])
-    if order is None:
+    if not order:
         return jsonResponse("Заказ не найден", HTTP_NOT_FOUND)
     
     # 3. Завершаем потоки поллинга, если таковые были и ждали именно этот статус
@@ -437,12 +522,13 @@ def paymentsWebhook():
         if existingThread is not None and \
             status in existingThread.awaitingForStatuses and \
             existingThread.awaitingForStatuses is not None:
-                # TOOO: КАК-ТО УБИТЬ ПОТОК existingThread.thread
-                pass
+                existingThread.stop_flag.set()  # Устанавливаем флаг остановки
+                # existingThread.thread.join()  # Ждем завершения
+                del ordersPollingThreads[order['id']]  # Удаляем из словаря
     
     # 4. Получаем информацию о владельце заказа
     user = DB.execute(SQLUser.selectUserById, [order['userid']])
-    if user is None:
+    if not user:
         return jsonResponse("Владелец заказа не найден", HTTP_NOT_FOUND)
 
     insertHistory(

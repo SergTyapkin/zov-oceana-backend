@@ -17,7 +17,7 @@ def addressGet(userData):
         req = request.args
         id = req['id']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     addressData = DB.execute(SQLAddresses.selectAddressById, [id])
     return jsonResponse(addressData)
@@ -31,7 +31,7 @@ def addressesUserGet(userData):
         userId = req['userId']
         search = req.get('search')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать адреса другого пользователя', HTTP_NO_PERMISSIONS)
@@ -59,7 +59,7 @@ def addressCreate(userData):
         code = req.get('code')
         comment = req.get('comment')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     if str(userData['id']) != str(userId) and userData['caneditusers'] is None:
         return jsonResponse('Нет прав читать адреса другого пользователя', HTTP_NO_PERMISSIONS)
@@ -91,10 +91,10 @@ def addressUpdate(userData):
         code = req.get('code')
         comment = req.get('comment')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     addressData = DB.execute(SQLAddresses.selectAddressById, [id])
-    if addressData is None:
+    if not addressData:
         return jsonResponse("Адрес не найден", HTTP_NOT_FOUND)
 
     if str(addressData['userid']) != str(userData['id']) and userData['caneditusers'] is None:
@@ -128,10 +128,10 @@ def addressDelete(userData):
         req = request.json
         id = req['id']
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     addressData = DB.execute(SQLAddresses.selectAddressById, [id])
-    if addressData is None:
+    if not addressData:
         return jsonResponse("Адрес не найден", HTTP_NOT_FOUND)
 
     if str(addressData['userid']) != str(userData['id']) and userData['caneditusers'] is None:

@@ -93,8 +93,15 @@ updateOrderPaymentIdUrlStatusQrdataById = \
     "paymentUrl = %s, " \
     "paymentStatus = %s, " \
     "paymentQrData = %s, " \
-    "paymentCreatedDate = NOW() " \
+    "paymentCreatedDate = NOW(), " \
     "updatedDate = NOW() " \
+    "WHERE id = %s " \
+    "RETURNING *"
+
+updateOrderPaymentRouteSourceById = \
+    "UPDATE orders " \
+    "SET paymentRoute = %s, " \
+    "paymentSource = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 

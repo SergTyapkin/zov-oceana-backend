@@ -19,7 +19,7 @@ def history():
         dateStart = req.get('dateStart')
         dateEnd = req.get('dateEnd')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     # get history list by filters
     history = DB.execute(SQLHistory.selectHistory(req), [], manyResults=True)

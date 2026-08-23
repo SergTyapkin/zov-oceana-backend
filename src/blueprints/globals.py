@@ -23,7 +23,7 @@ def globalsUpdate(userData):
         isOnMaintenance = req.get('isOnMaintenance')
         goodsIdsOnLanding = req.get('goodsIdsOnLanding')
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     goodsIdsOnLanding = list(map(int, goodsIdsOnLanding))
 
@@ -47,7 +47,7 @@ def getGlobals():
     try:
         req = request.args
     except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {err.__repr__()}", HTTP_INVALID_DATA)
+        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     globalsData = DB.execute(SQLGlobals.selectGlobals)
 
