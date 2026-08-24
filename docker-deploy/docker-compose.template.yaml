@@ -8,20 +8,7 @@ services:
       args:
         - PYTHON_RELEASE
     ports:
-      - ${PORT}:9000
-    environment:
-      - PROJECT_NAME
-      - VERSION
-      - DEBUG
-      - DB_ECHO_LOG
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_HOST=${DB_CONTAINER_NAME}
-      - DB_PORT=${POSTGRES_PORT}
-      - DB_NAME=${POSTGRES_DB}
-      - MAIL_PASSWORD
-      - TG_BOT_TOKEN
-      - TG_BOT_ENABLED
+      - ${PORT}:${PORT}
     restart: unless-stopped
     volumes:
       - ../.env:/app/.env:r
@@ -38,7 +25,7 @@ services:
     container_name: ${DB_CONTAINER_NAME}
     image: postgres:${POSTGRES_RELEASE:-15.3-alpine}
     ports:
-      - ${DB_PORT}:${POSTGRES_PORT}
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
