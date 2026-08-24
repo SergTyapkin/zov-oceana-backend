@@ -64,9 +64,9 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ./images
+      device: ../images
       o: bind
-  
+
 networks:
   backend-internal:
   front-back:

@@ -7,4 +7,5 @@ Flask-Mail==0.9.1
 geoip2==4.8.0
 pycolors==0.1.2
 rfc3339==6.2
+python-dotenv>=1.0.0
 pytelegrambotapi==4.22.0
