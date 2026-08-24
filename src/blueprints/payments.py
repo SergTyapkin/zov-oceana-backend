@@ -269,7 +269,7 @@ def createPayment(userData):
     params = {
         'TerminalKey': CONFIG.tbank.terminal_key,
         'Amount': round(total_cost),
-        'OrderId': f'{order['id']}_{time.ctime().replace(' ', '-')}', # Добвляем к id заказа текущее время после _. В ответах от тинькоффа мы отрезаем время и получаем чистое id
+        'OrderId': f'{order['id']}_{time.ctime().replace(" ", "-")}', # Добвляем к id заказа текущее время после _. В ответах от тинькоффа мы отрезаем время и получаем чистое id
         'Description': f"Оплата заказа №{order['number']} на сайте {CONFIG.deploy_short_url}",
         'CustomerKey': str(userData['id']),
         'Language': 'ru',
