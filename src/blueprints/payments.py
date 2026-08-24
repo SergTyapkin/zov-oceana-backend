@@ -412,7 +412,7 @@ def confirmOrCancelPayment(userData, orderId, amount: int = None, isCancel=False
     insertHistory(
         userData['id'],
         'payment',
-        f'{'Cancel' if isCancel else 'Confirm'} payment for order #{orderId}, paymentId: {res.id}, status: {res.status}, success: {res.success}'
+        f'{"Cancel" if isCancel else "Confirm"} payment for order #{orderId}, paymentId: {res.id}, status: {res.status}, success: {res.success}'
     )
     
     # 3. Запускаем поллинг для того, чтобы узнать когда пройдет оплата, если вебхук не сработает
