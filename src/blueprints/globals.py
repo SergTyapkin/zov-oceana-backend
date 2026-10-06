@@ -22,6 +22,8 @@ def globalsUpdate(userData):
         req = request.json
         isOnMaintenance = req.get('isOnMaintenance')
         goodsIdsOnLanding = req.get('goodsIdsOnLanding')
+        blackPearlCost = req.get('blackPearlCost')
+        moneyForBonuses = req.get('moneyForBonuses')
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
@@ -31,8 +33,9 @@ def globalsUpdate(userData):
 
     isOnMaintenance = isOnMaintenance if isOnMaintenance is not None else globalsData['isonmaintenance']
     goodsIdsOnLanding = goodsIdsOnLanding or globalsData['goodsidsonlanding']
+    blackPearlCost = blackPearlCost or globalsData['blackpearlcost']
+    moneyForBonuses = moneyForBonuses or globalsData['moneyforbonuses']
 
-    print(isOnMaintenance, goodsIdsOnLanding)
     resp = DB.execute(SQLGlobals.updateGlobals, [isOnMaintenance, goodsIdsOnLanding])
 
     insertHistory(

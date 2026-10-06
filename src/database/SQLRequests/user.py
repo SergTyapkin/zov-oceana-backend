@@ -35,14 +35,6 @@ selectUserById = \
     "SELECT * FROM users " \
     "WHERE id = %s"
 
-selectUserReferrerById = \
-    "SELECT * FROM users " \
-    "WHERE id = (" \
-        "SELECT referrerId " \
-        "FROM users " \
-        "WHERE id = %s " \
-    ")"
-
 selectAnotherUserById = \
     f"SELECT {userPublicColumns} FROM users " \
     "WHERE id = %s"
@@ -88,8 +80,9 @@ selectAllUserSessions = \
     "WHERE userId = %s"
 
 selectUserDataBySessionToken = \
-    "SELECT users.*, ip FROM sessions " \
+    "SELECT users.*, ip, partners.confirmed as isPartner FROM sessions " \
     "JOIN users ON sessions.userId = users.id " \
+    "LEFT JOIN partners ON users.id = partners.userId " \
     "WHERE token = %s"
 
 def selectUsersByFilters(filters):
@@ -142,12 +135,6 @@ updateUserTgDataWithoutAvatarUrlById = \
     "WHERE id = %s " \
     "RETURNING *"
 
-updateUserAddPartnerBonusesById = \
-    "UPDATE users SET " \
-    "partnerBonuses = partnerBonuses + %s " \
-    "WHERE id = %s " \
-    "RETURNING *"
-
 updateUserById = \
     "UPDATE users SET " \
     "givenName = %s, " \
@@ -158,7 +145,7 @@ updateUserById = \
     "isEmailNotificationsOn = %s, " \
     "avatarUrl = %s, " \
     "city = %s, " \
-    "partnerStatus = %s " \
+    "isPartnershipRequested = %s, " \
     "WHERE id = %s " \
     "RETURNING *"
 
@@ -174,6 +161,7 @@ adminUpdateUserById = \
     "isEmailNotificationsOn = %s, " \
     "avatarUrl = %s, " \
     "city = %s, " \
+    "isPartnershipRequested = %s, " \
     "referrerId = %s, " \
     "canEditOrders = %s, " \
     "canEditUsers = %s, " \
@@ -181,7 +169,6 @@ adminUpdateUserById = \
     "canEditHistory = %s, " \
     "canExecuteSQL = %s, " \
     "canEditGlobals = %s, " \
-    "partnerStatus = %s " \
     "WHERE id = %s " \
     "RETURNING *"
 

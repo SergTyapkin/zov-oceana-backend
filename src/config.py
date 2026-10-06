@@ -87,6 +87,11 @@ class AppConfig:
     # Маркетинг
     order_cost_percent_to_referrer_bonuses: float = 0.10
     order_cost_percent_to_referrer_ahead_1_bonuses: float = 0.08
+    newbie_bonus_periods_default: int = 4
+    newbie_bonus_value: int = 3
+    newbie_bonus_max_deep: int = 3
+    black_pearl_bonus_value: int = 10
+    personal_bonuses_to_activation: int = 75
 
     # CORS
     cors_origins: list = field(default_factory=lambda: [
@@ -215,6 +220,11 @@ class Config:
 
                 order_cost_percent_to_referrer_bonuses=float(get_env('ORDER_COST_PERCENT_TO_REFERRER_BONUSES', '0.10')),
                 order_cost_percent_to_referrer_ahead_1_bonuses=float(get_env('ORDER_COST_PERCENT_TO_REFERRER_AHEAD_1_BONUSES', '0.08')),
+                newbie_bonus_periods_default=int(get_env('NEWBIE_BONUS_PERIODS_DEFAULT', '4')),
+                newbie_bonus_value=int(get_env('NEWBIE_BONUS_VALUE', '4')),
+                newbie_bonus_max_deep=int(get_env('NEWBIE_BONUS_MAX_DEEP', '3')),
+                black_pearl_bonus_value=int(get_env('BLACK_PEARL_BONUS_VALUE', '10')),
+                personal_bonuses_to_activation=int(get_env('PERSONAL_BONUSES_TO_ACTIVATION', '75')),
 
                 cors_origins=parse_cors(get_env('CORS_ORIGINS', 'http://localhost,https://localhost,http://127.0.0.1,https://127.0.0.1')),
 

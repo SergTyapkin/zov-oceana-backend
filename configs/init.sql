@@ -13,19 +13,18 @@ CREATE TABLE IF NOT EXISTS users (
     city             TEXT NOT NULL,
     joinedDate       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     password         TEXT NOT NULL,
-    partnerStatus    BOOLEAN DEFAULT FALSE,
     referrerId       INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    partnerBonuses   FLOAT NOT NULL DEFAULT 0,
+    isPartnershipRequested  BOOLEAN DEFAULT FALSE,
 
-    isEmailNotificationsOn  BOOLEAN DEFAULT TRUE,
+    isEmailNotificationsOn  BOOLEAN NOT NULL DEFAULT TRUE,
 
-    canEditOrders           BOOLEAN DEFAULT FALSE,
-    canEditUsers            BOOLEAN DEFAULT FALSE,
-    canEditGoods            BOOLEAN DEFAULT FALSE,
-    canEditPartners         BOOLEAN DEFAULT FALSE,
-    canExecuteSQL           BOOLEAN DEFAULT FALSE,
-    canEditHistory          BOOLEAN DEFAULT FALSE,
-    canEditGlobals          BOOLEAN DEFAULT FALSE
+    canEditOrders           BOOLEAN NOT NULL DEFAULT FALSE,
+    canEditUsers            BOOLEAN NOT NULL DEFAULT FALSE,
+    canEditGoods            BOOLEAN NOT NULL DEFAULT FALSE,
+    canEditPartners         BOOLEAN NOT NULL DEFAULT FALSE,
+    canExecuteSQL           BOOLEAN NOT NULL DEFAULT FALSE,
+    canEditHistory          BOOLEAN NOT NULL DEFAULT FALSE,
+    canEditGlobals          BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -46,6 +45,51 @@ CREATE TABLE IF NOT EXISTS secretCodes (
     meta           TEXT DEFAULT NULL,
     expires        TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (userId, type)
+);
+
+------ Qualities ------
+CREATE TABLE IF NOT EXISTS qualities (
+    id                   SERIAL PRIMARY KEY,
+    title                TEXT NOT NULL,
+    
+    branchDeepForQuality INT NOT NULL,
+    percentForQuality    FLOAT NOT NULL,
+    
+    activeCountRequirement          INT DEFAULT NULL,
+    branchesCountRequirement        INT DEFAULT NULL,
+    branchesValuesRequirement       FLOAT DEFAULT NULL,
+    totalPersonalBonusesRequirement FLOAT DEFAULT NULL,
+
+    qualityBonusValue    INT DEFAULT NULL,
+    qualityBonusMaxCount INT DEFAULT NULL
+);
+
+------ Partners ------
+CREATE TABLE IF NOT EXISTS partners (
+    userId             INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+
+    totalBonuses       FLOAT NOT NULL DEFAULT 0,
+
+    personalBonuses    FLOAT NOT NULL DEFAULT 0,
+    groupBonuses       FLOAT NOT NULL DEFAULT 0,
+    branchTotalBonuses FLOAT NOT NULL DEFAULT 0,
+    qualityId          INT REFERENCES qualities(id) ON DELETE SET NULL ON UPDATE CASCADE,
+
+    newbieBonusPeriodsLeft INT NOT NULL DEFAULT 0,
+    blackPearlBonuses      INT NOT NULL DEFAULT 0,
+    bonusBigTeamPeriods    INT NOT NULL DEFAULT 0,
+    
+    activatedDate      TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    isActive           BOOLEAN NOT NULL DEFAULT FALSE,
+    joinedDate         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS partnersQualities (
+    id           SERIAL PRIMARY KEY,
+    partnerId    INT NOT NULL REFERENCES partners(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    qualityId    INT NOT NULL REFERENCES qualities(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    count        INT NOT NULL DEFAULT 0,
+    UNIQUE (goodsId, categoryId)
 );
 
 ------ Images ------
@@ -190,5 +234,7 @@ CREATE TABLE IF NOT EXISTS history (
 ------ Globals ------
 CREATE TABLE IF NOT EXISTS globals (
     isOnMaintenance   BOOLEAN NOT NULL DEFAULT FALSE,
-    goodsIdsOnLanding INT[] NOT NULL DEFAULT ARRAY[]::INT[]
+    goodsIdsOnLanding INT[] NOT NULL DEFAULT ARRAY[]::INT[],
+    blackPearlCost    FLOAT NOT NULL DEFAULT 0,
+    moneyForBonuses   FLOAT NOT NULL DEFAULT 0
 );

@@ -15,12 +15,12 @@ selectPartnerBonusesHistoryByUserIdForLastMonth = \
     f"SELECT {userPublicColumns}, partnerBonusesHistory.* FROM partnerBonusesHistory " \
     "LEFT JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
     "WHERE userId = %s " \
-    "AND date > NOW() - INTERVAL '30 day'"
+    "AND date > DATE_TRUNC('month', NOW())"
 selectTotalPartnerBonusesHistoryByUserIdForLastMonth = \
     "SELECT SUM(value) as total FROM partnerBonusesHistory " \
     "LEFT JOIN users ON partnerBonusesHistory.fromUserId = users.id " \
     "WHERE userId = %s " \
-    "AND date > NOW() - INTERVAL '30 day'"
+    "AND date > DATE_TRUNC('month', NOW())"
 
 
 selectAllBonusesByUserIdForLastMonth = \
@@ -32,7 +32,7 @@ selectAllBonusesByUserIdForLastMonth = \
             "users.partnerStatus = true AND " \
             "users.referrerid = %s " \
         ")" \
-    "AND (date is null OR date > NOW() - INTERVAL '30 day') " \
+    "AND (date is null OR date > DATE_TRUNC('month', NOW())) " \
     "GROUP BY users.id "
 
 selectPartnersAndBonusesByUserIdForLastMonth = \
@@ -41,7 +41,7 @@ selectPartnersAndBonusesByUserIdForLastMonth = \
     "WHERE " \
         "users.partnerStatus = true AND " \
         "users.referrerid = %s " \
-    "AND (date is null OR date > NOW() - INTERVAL '30 day') " \
+    "AND (date is null OR date > DATE_TRUNC('month', NOW())) " \
     "GROUP BY users.id "
 
 # ------------------

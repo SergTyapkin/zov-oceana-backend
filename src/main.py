@@ -8,6 +8,7 @@ import datetime
 import time
 from rfc3339 import rfc3339
 
+from connections import DB
 from src.config import CONFIG
 from src.blueprints.user import app as user_app
 from src.blueprints.sql import app as sql_app
@@ -18,8 +19,10 @@ from src.blueprints.addresses import app as addresses_app
 from src.blueprints.orders import app as orders_app
 from src.blueprints.carts import app as cart_app
 from src.blueprints.partners import app as partners_app
+from src.blueprints.qualities import app as qualities_app
 from src.blueprints.globals import app as globals_app
-from src.blueprints.payments import app as payments_app, DB
+from src.blueprints.payments import app as payments_app
+from src.blueprints.payments import app as payments_app
 from src.constants import HTTP_NOT_FOUND, HTTP_INTERNAL_ERROR
 from src.middleware import Middleware
 from src.utils.utils import jsonResponse
@@ -40,6 +43,7 @@ app.register_blueprint(addresses_app, url_prefix='/addresses')
 app.register_blueprint(orders_app, url_prefix='/orders')
 app.register_blueprint(cart_app, url_prefix='/cart')
 app.register_blueprint(partners_app, url_prefix='/partner')
+app.register_blueprint(qualities_app, url_prefix='/quality')
 app.register_blueprint(globals_app, url_prefix='/globals')
 app.register_blueprint(payments_app, url_prefix='/payments')
 

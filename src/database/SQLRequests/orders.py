@@ -39,6 +39,12 @@ selectOrderGoodsByOrderId = \
     "JOIN goods ON ordersGoods.goodsId = goods.id " \
     "WHERE orderId = %s"
 
+selectUserOrdersMonthlyByUserId = \
+    "SELECT * FROM orders " \
+    "WHERE userId = %s " \
+    "AND createdDate > DATE_TRUNC('month', NOW()) " \
+    "ORDER BY createdDate DESC"
+
 # ------------------
 
 updateOrderById = \

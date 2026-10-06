@@ -12,5 +12,7 @@ selectGlobals = \
 updateGlobals = \
     "UPDATE globals SET " \
     "isOnMaintenance = %s, " \
-    "goodsIdsOnLanding = %s " \
+    "goodsIdsOnLanding = %s, " \
+    "blackPearlCost = %s, " \
+    "moneyForBonuses = %s " \
     "RETURNING *"

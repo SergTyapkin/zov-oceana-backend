@@ -298,7 +298,7 @@ def userUpdate(userData):
         avatarUrl = req.get('avatarUrl')
         tel = req.get('tel')
         city = req.get('city')
-        partnerStatus = req.get('partnerStatus')
+        isPartnershipRequested = req.get('isPartnershipRequested')
         referrerId = req.get('referrerId')
 
         isEmailNotificationsOn = req.get('isEmailNotificationsOn')
@@ -335,6 +335,7 @@ def userUpdate(userData):
     avatarUrl = avatarUrl or targetUserData['avatarurl']
     tel = tel or targetUserData['tel']
     city = city or targetUserData['city']
+    isPartnershipRequested = isPartnershipRequested if 'isPartnershipRequested' in req else targetUserData['ispartnershiprequested']
     isEmailNotificationsOn = isEmailNotificationsOn if 'isEmailNotificationsOn' in req else targetUserData['isemailnotificationson']
     tgUsername = tgUsername or targetUserData['tgusername']
     tgId = tgId or targetUserData['tgid']
@@ -344,7 +345,6 @@ def userUpdate(userData):
     canEditHistory = canEditHistory if canEditHistory is not None else targetUserData['canedithistory']
     canExecuteSQL = canExecuteSQL if canExecuteSQL is not None else targetUserData['canexecutesql']
     canEditGlobals = canEditGlobals if canEditGlobals is not None else targetUserData['caneditglobals']
-    partnerStatus = partnerStatus if 'partnerStatus' in req else targetUserData['partnerstatus']
     referrerId = referrerId if 'referrerId' in req else targetUserData['referrerid']
 
     email = email.strip().lower()
@@ -353,17 +353,17 @@ def userUpdate(userData):
     try:
         if userData['caneditusers']:
             resp = DB.execute(SQLUser.adminUpdateUserById,
-                              [tgUsername, tgId, givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, city, referrerId,
+                              [tgUsername, tgId, givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, city, 
+                               isPartnershipRequested, referrerId,
                                canEditOrders, canEditUsers, canEditGoods,
-                               canEditHistory, canExecuteSQL, canEditGlobals, partnerStatus, userId])
+                               canEditHistory, canExecuteSQL, canEditGlobals, userId])
             print(resp)
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
         else:
-            if partnerStatus is True:
-                partnerStatus = targetUserData['partnerStatus']
             resp = DB.execute(SQLUser.updateUserById,
-                              [givenName, familyName, middleName, email, tel, isEmailNotificationsOn, avatarUrl, city, partnerStatus, userId])
+                              [givenName, familyName, middleName, email, tel,
+                               isEmailNotificationsOn, avatarUrl, city, isPartnershipRequested, userId])
             if isEmailChanged:
                 DB.execute(SQLUser.updateUserRevokeEmailConfirmationByUserId, [userId])
     except Exception as err:

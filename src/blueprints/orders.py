@@ -32,6 +32,20 @@ def prepareOrder(orderData, addGoods = True, addAddress = True):
         else:
             orderData['address'] = None
 
+def getOrderTotalCost(orderData):
+    totalCost = 0
+    orderGoods = DB.execute(SQLOrders.selectOrderGoodsByOrderId, [orderData['id']], manyResults=True)
+    for goods in orderGoods:
+        totalCost += goods['amount'] * goods['cost']
+    return totalCost
+
+def getOrdersTotalCost(orders):
+    totalCost = 0
+    for order in orders:
+        totalCost += getOrderTotalCost(order)
+    return totalCost
+
+
 @app.route("", methods=["GET"])
 @login_required
 def getOrder(userData):
@@ -242,15 +256,16 @@ def updateOrderData(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
-    try:
-        for goodsOne in goods:
-            if \
-                'id' not in goodsOne or \
-                'cost' not in goodsOne or \
-                'amount' not in goodsOne:
-                return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
-    except Exception as err:
-        return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
+    if goods is not None:
+        try:
+            for goodsOne in goods:
+                if \
+                    'id' not in goodsOne or \
+                    'cost' not in goodsOne or \
+                    'amount' not in goodsOne:
+                    return jsonResponse(f"Не удалось сериализовать json: не хватает полей в одном из goods", HTTP_INVALID_DATA)
+        except Exception as err:
+            return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     orderData = None
     if id is not None:
@@ -280,11 +295,12 @@ def updateOrderData(userData):
     except Exception as err:
         return jsonResponse(f"Не удалось изменить заказ {str(err)}", HTTP_INVALID_DATA)
 
-    DB.execute(SQLOrders.deleteAllOrderGoodsByOrderId, [updatedOrderData['id']])
-    for goodsOne in goods:
-        goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOne['cost'], goodsOne['amount']])
-        if not goodsInOrderData:
-            return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
+    if goods is not None:
+        DB.execute(SQLOrders.deleteAllOrderGoodsByOrderId, [updatedOrderData['id']])
+        for goodsOne in goods:
+            goodsInOrderData = DB.execute(SQLOrders.insertOrderGoods, [orderData['id'], goodsOne['id'], goodsOne['cost'], goodsOne['amount']])
+            if not goodsInOrderData:
+                return jsonResponse(f"Не удалось добавить товар #{goodsOne['id']} в заказ #{orderData['id']}", HTTP_INVALID_DATA)
 
 
     insertHistory(
