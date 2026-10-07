@@ -27,6 +27,12 @@ selectPartnersReferreredByUserid = \
     "JOIN users ON users.id = partners.userId " \
     "WHERE referrerId = %s"
 
+selectActivePartnersReferreredByUserid = \
+    "SELECT partners.* FROM partners " \
+    "JOIN users ON users.id = partners.userId " \
+    "WHERE referrerId = %s " \
+    "AND isActive = %s"
+
 # ------------------
 
 updatePartnerByUserid = \
@@ -94,6 +100,11 @@ updatePartnersDecreaseNewbieBonusPeriodsLeft = \
 updatePartnerQualityIdByUserid = \
     "UPDATE partners SET " \
     "qualityId = %s " \
+    "WHERE userId = %s " \
+    "RETURNING *"
+updatePartnerSetBonusBigTeamPeriods = \
+    "UPDATE partners SET " \
+    "bonusBigTeamPeriods = %s " \
     "WHERE userId = %s " \
     "RETURNING *"
 

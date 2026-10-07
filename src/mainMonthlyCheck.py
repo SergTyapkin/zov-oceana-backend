@@ -23,15 +23,18 @@ if __name__ == '__main__':
     DB.execute(SQLPartners.updatePartnersDecreaseNewbieBonusPeriodsLeft)
 
     # Считаем квалификации
-    # Получаем всех оставшихся активных
+    # Получаем всех оставшихся активных, для каждого считаем
     partners = DB.execute(SQLPartners.selectPartnersByActive, [True], manyResults=True)
     for partner in partners:
+        # Попутно получаем рефералов в 1 и 2 глубине
         referals = DB.execute(SQLPartners.selectPartnersReferreredByUserid, [partner['userid']], manyResults=True)
-        activeReferals = 0 # Кол-во активных рефералов
+        activeReferalsIn1DeepCount = 0 # Кол-во активных рефералов
+        activeReferalsIn2DeepCount = 0
         branchTotalBonuses = [] # Объем веток
         for referal in referals:
             branchTotalBonuses += [referal['branchtotalbonuses']]
-            activeReferals += 1 if referal['isactive'] else 0
+            activeReferalsIn1DeepCount += 1 if referal['isactive'] else 0
+            activeReferalsIn2DeepCount += len(DB.execute(SQLPartners.selectActivePartnersReferreredByUserid, [referal['userid']], manyResults=True))
         personalBonuses = partner['personalbonuses'] # Личный объем
 
         # Определяем квалификацию по всем условиям
@@ -39,7 +42,7 @@ if __name__ == '__main__':
         for quality in qualities:
             if (
                     quality['activecountrequirement'] is not None and 
-                    activeReferals >= quality['activecountrequirement']
+                    activeReferalsIn1DeepCount >= quality['activecountrequirement']
                 ) and (
                     quality['totalpersonalbonusesrequirement'] is not None and
                     personalBonuses >= quality['totalpersonalbonusesrequirement']
@@ -63,12 +66,27 @@ if __name__ == '__main__':
                         DB.execute(SQLPartners.increasePartnersQualitiesCountByPartneridQualityid, [partner['id'], quality['id']])
                     else:
                         DB.execute(SQLPartners.insertPartnersQualities, [partner['id'], quality['id']])
+                    # Если вдруг там 0 бонусов, то сразу выходим
+                    if not quality['qualitybonusvalue']:
+                        break
                     DB.execute(SQLPartners.updatePartnerAddTotalBonusesByUserId, [quality['qualitybonusvalue'], partner['id']])
-                    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, quality['qualitybonusvalue'] or 0, None, f'Бонус квалификации "{quality['title']}"'])
+                    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, quality['qualitybonusvalue'], None, f'Бонус квалификации "{quality['title']}"'])
                     break
 
-        
-        # TODO: Считаем бонус большой команды
+        # Считаем бонус большой команды
+        if (
+                activeReferalsIn1DeepCount >= CONFIG.big_team_bonus_1_deep_requirements and
+                activeReferalsIn2DeepCount >= CONFIG.big_team_bonus_2_deep_requirements
+            ):
+            # Надо увеличить периоды или начислить бонус
+            newBigTeamPeriods = partner['bonusbigteamperiods'] + 1
+            if newBigTeamPeriods >= CONFIG.big_team_bonus_periods_requirements:
+                # Начисляем и уменьшаем периоды
+                newBigTeamPeriods -= CONFIG.big_team_bonus_periods_requirements
+                DB.execute(SQLPartners.updatePartnerAddTotalBonusesByUserId, [CONFIG.big_team_bonuses, partner['id']])
+                DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, CONFIG.big_team_bonuses, None, f'Бонус большой команды'])
+            # Записываем ему периоды
+            DB.execute(SQLPartners.updatePartnerSetBonusBigTeamPeriods, [newBigTeamPeriods, partner['id']])
 
     # - Бонус черной икры считается при заказах
 

@@ -92,6 +92,10 @@ class AppConfig:
     newbie_bonus_max_deep: int = 3
     black_pearl_bonus_value: int = 10
     personal_bonuses_to_activation: int = 75
+    big_team_bonus_1_deep_requirements: int = 5
+    big_team_bonus_2_deep_requirements: int = 10
+    big_team_bonus_periods_requirements: int = 2
+    big_team_bonuses: int = 2000
 
     # CORS
     cors_origins: list = field(default_factory=lambda: [
@@ -225,6 +229,10 @@ class Config:
                 newbie_bonus_max_deep=int(get_env('NEWBIE_BONUS_MAX_DEEP', '3')),
                 black_pearl_bonus_value=int(get_env('BLACK_PEARL_BONUS_VALUE', '10')),
                 personal_bonuses_to_activation=int(get_env('PERSONAL_BONUSES_TO_ACTIVATION', '75')),
+                big_team_bonus_1_deep_requirements=int(get_env('BIG_TEAM_BONUS_1_DEEP_REQUIREMENTS', '5')),
+                big_team_bonus_2_deep_requirements=int(get_env('BIG_TEAM_BONUS_2_DEEP_REQUIREMENTS', '10')),
+                big_team_bonus_periods_requirements=int(get_env('BIG_TEAM_BONUS_PERIODS_REQUIREMENTS', '2')),
+                big_team_bonuses=int(get_env('BIG_TEAM_BONUSES', '2000')),
 
                 cors_origins=parse_cors(get_env('CORS_ORIGINS', 'http://localhost,https://localhost,http://127.0.0.1,https://127.0.0.1')),
 
