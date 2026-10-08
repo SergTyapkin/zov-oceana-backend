@@ -21,12 +21,27 @@ class TbankConfig:
     use_two_stage_payments: bool
     payments_polling_interval_sec: int = 60  # 1 мин
     max_order_pay_time_sec: int = 900  # 15 мин
+
+    # Обычный эквайринг, прием платежей
     init_url: str = 'https://securepay.tinkoff.ru/v2/Init'
     confirm_url: str = 'https://securepay.tinkoff.ru/v2/Confirm'
     cancel_url: str = 'https://securepay.tinkoff.ru/v2/Cancel'
     refund_url: str = 'https://securepay.tinkoff.ru/v2/Refund'
     get_qr_url: str = 'https://securepay.tinkoff.ru/v2/GetQr'
     get_state_url: str = 'https://securepay.tinkoff.ru/v2/GetState'
+    add_customer_url: str = 'https://securepay.tinkoff.ru/v2/AddCustomer'
+    add_card_url: str = 'https://securepay.tinkoff.ru/v2/AddCard'
+    get_card_list_url: str = 'https://securepay.tinkoff.ru/v2/GetCardList'
+
+    # Payout / СБП
+    payout_terminal_key: str
+    payout_terminal_password: str
+    payout_private_key_path: str
+    payout_cert_serial_number: str
+    payout_sbp_init_url: str = 'https://securepay.tinkoff.ru/a2c/sbp/v2/Init'
+    payout_sbp_payment_url: str = 'https://securepay.tinkoff.ru/a2c/sbp/v2/Payment'
+    payout_sbp_get_state_url: str = 'https://securepay.tinkoff.ru/a2c/sbp/GetState'
+    payout_sbp_get_members_url: str = 'https://securepay.tinkoff.ru/a2c/sbp/GetSbpMembers'
 
 
 @dataclass
@@ -96,6 +111,7 @@ class AppConfig:
     big_team_bonus_2_deep_requirements: int = 10
     big_team_bonus_periods_requirements: int = 2
     big_team_bonuses: int = 2000
+    min_bonuses_to_payout: int = 100
 
     # CORS
     cors_origins: list = field(default_factory=lambda: [
@@ -193,6 +209,17 @@ class Config:
                     refund_url=get_env('TBANK_REFUND_URL', 'https://securepay.tinkoff.ru/v2/Refund'),
                     get_qr_url=get_env('TBANK_GET_QR_URL', 'https://securepay.tinkoff.ru/v2/GetQr'),
                     get_state_url=get_env('TBANK_GET_STATE_URL', 'https://securepay.tinkoff.ru/v2/GetState'),
+                    add_customer_url=get_env('TBANK_ADD_CUSTOMER_URL', 'https://securepay.tinkoff.ru/v2/AddCustomer'),
+                    add_card_url=get_env('TBANK_ADD_CARD_URL', 'https://securepay.tinkoff.ru/v2/AddCard'),
+                    get_card_list_url=get_env('TBANK_GET_CARD_LIST_URL', 'https://securepay.tinkoff.ru/v2/GetCardList'),
+                    payout_terminal_key=get_env('TBANK_PAYOUT_TERMINAL_KEY'),
+                    payout_terminal_password=get_env('TBANK_PAYOUT_TERMINAL_PASSWORD'),
+                    payout_private_key_path=get_env('TBANK_PAYOUT_PRIVATE_KEY_PATH'),
+                    payout_cert_serial_number=get_env('TBANK_PAYOUT_CERT_SERIAL_NUMBER'),
+                    payout_sbp_init_url=get_env('TBANK_PAYOUT_SBP_INIT_URL', 'https://securepay.tinkoff.ru/a2c/sbp/v2/Init'),
+                    payout_sbp_payment_url=get_env('TBANK_PAYOUT_SBP_PAYMENT_URL', 'https://securepay.tinkoff.ru/a2c/sbp/v2/Payment'),
+                    payout_sbp_get_state_url=get_env('TBANK_PAYOUT_SBP_GET_STATE_URL', 'https://securepay.tinkoff.ru/a2c/sbp/GetState'),
+                    payout_sbp_get_members_url=get_env('TBANK_PAYOUT_SBP_GET_MEMBERS_URL', 'https://securepay.tinkoff.ru/a2c/sbp/GetSbpMembers'),
                 ),
 
                 email=EmailConfig(
@@ -233,6 +260,7 @@ class Config:
                 big_team_bonus_2_deep_requirements=int(get_env('BIG_TEAM_BONUS_2_DEEP_REQUIREMENTS', '10')),
                 big_team_bonus_periods_requirements=int(get_env('BIG_TEAM_BONUS_PERIODS_REQUIREMENTS', '2')),
                 big_team_bonuses=int(get_env('BIG_TEAM_BONUSES', '2000')),
+                min_bonuses_to_payout=int(get_env('MIN_BONUSES_TO_PAYOUT', '100')),
 
                 cors_origins=parse_cors(get_env('CORS_ORIGINS', 'http://localhost,https://localhost,http://127.0.0.1,https://127.0.0.1')),
 

@@ -69,7 +69,7 @@ def addressCreate(userData):
     insertHistory(
         userData['id'],
         'address',
-        f'Creates address: "{address["title"]}" #{address["id"]}'
+        f'Created address: "{address["title"]}" #{address["id"]}'
     )
 
     return jsonResponse(address)
@@ -115,7 +115,7 @@ def addressUpdate(userData):
     insertHistory(
         userData['id'],
         'address',
-        f'Update address: {json.dumps(req)}'
+        f'Updated address: {json.dumps(req)}'
     )
 
     return jsonResponse(address)
@@ -142,7 +142,7 @@ def addressDelete(userData):
     insertHistory(
         userData['id'],
         'address',
-        f'Delete address: #{id}'
+        f'Deleted address: #{id}'
     )
 
     return jsonResponse("Адрес удален")

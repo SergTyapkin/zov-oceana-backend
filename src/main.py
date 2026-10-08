@@ -22,7 +22,7 @@ from src.blueprints.partners import app as partners_app
 from src.blueprints.qualities import app as qualities_app
 from src.blueprints.globals import app as globals_app
 from src.blueprints.payments import app as payments_app
-from src.blueprints.payments import app as payments_app
+from src.blueprints.payouts import app as payouts_app
 from src.constants import HTTP_NOT_FOUND, HTTP_INTERNAL_ERROR
 from src.middleware import Middleware
 from src.utils.utils import jsonResponse
@@ -46,6 +46,7 @@ app.register_blueprint(partners_app, url_prefix='/partner')
 app.register_blueprint(qualities_app, url_prefix='/quality')
 app.register_blueprint(globals_app, url_prefix='/globals')
 app.register_blueprint(payments_app, url_prefix='/payments')
+app.register_blueprint(payouts_app, url_prefix='/payouts')
 
 app.config['MAIL_SERVER'] = CONFIG.email.smtp_host
 app.config['MAIL_PORT'] = CONFIG.email.smtp_port

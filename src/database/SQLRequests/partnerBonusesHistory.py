@@ -1,8 +1,8 @@
 from src.database.SQLRequests.user import userPublicColumns
 
 insertPartnerBonusesHistory = \
-    "INSERT INTO partnerBonusesHistory (userId, fromUserId, value, orderId, comment) " \
-    "VALUES (%s, %s, %s, %s, %s) " \
+    "INSERT INTO partnerBonusesHistory (userId, fromUserId, value, isGroup, orderId, comment) " \
+    "VALUES (%s, %s, %s, %s, %s, %s) " \
     "RETURNING *"
 
 # ------------------

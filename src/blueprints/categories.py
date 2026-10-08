@@ -38,7 +38,7 @@ def categoryCreate(userData):
     insertHistory(
         userData['id'],
         'category',
-        f'Creates category: "{category["title"]}" #{category["id"]}'
+        f'Created category: "{category["title"]}" #{category["id"]}'
     )
 
     return jsonResponse(category)
@@ -69,7 +69,7 @@ def categoryUpdate(userData):
     insertHistory(
         userData['id'],
         'category',
-        f'Update category: {json.dumps(req)}'
+        f'Updated category: {json.dumps(req)}'
     )
 
     return jsonResponse(category)
@@ -89,7 +89,7 @@ def categoryDelete(userData):
     insertHistory(
         userData['id'],
         'category',
-        f'Delete category: #{id}'
+        f'Deleted category: #{id}'
     )
 
     return jsonResponse("Категория удалена")

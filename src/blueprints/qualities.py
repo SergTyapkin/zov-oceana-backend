@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, request
 from src.connections import DB
 from src.constants import HTTP_NO_PERMISSIONS, HTTP_INVALID_DATA, HTTP_NOT_FOUND
@@ -44,6 +46,11 @@ def createQuality(userData):
     quality = DB.execute(SQLQualities.insertQuality, [title, branchDeepForQuality, percentForQuality, activeCountRequirement,
                                                       branchesCountRequirement, branchesValuesRequirement, totalPersonalBonusesRequirement,
                                                       qualityBonusValue, qualityBonusMaxCount])
+    insertHistory(
+        userData['id'],
+        'quality',
+        f'Created quality #{quality['id']}: {json.dumps(req)}'
+    )
     return jsonResponse(quality)
 
 @app.route("/", methods=["PUT"])
@@ -81,6 +88,11 @@ def updateQuality(userData):
     quality = DB.execute(SQLQualities.updateQualityById, [title, branchDeepForQuality, percentForQuality, activeCountRequirement,
                                                       branchesCountRequirement, branchesValuesRequirement, totalPersonalBonusesRequirement,
                                                       qualityBonusValue, qualityBonusMaxCount, id])
+    insertHistory(
+        userData['id'],
+        'quality',
+        f'Updated quality #{id}: {json.dumps(req)}'
+    )
     return jsonResponse(quality)
 
 
@@ -94,5 +106,10 @@ def deleteQuality(userData):
         return jsonResponse(f"Не удалось сериализовать json: {str(err)}", HTTP_INVALID_DATA)
 
     DB.execute(SQLQualities.deleteQualityById, [id])
+    insertHistory(
+        userData['id'],
+        'quality',
+        f'Deleted quality #{id}'
+    )
     return jsonResponse("Квалификация удалена")
 

@@ -217,6 +217,7 @@ CREATE TABLE IF NOT EXISTS partnerBonusesHistory (
     userId         INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
     fromUserId     INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     value          FLOAT NOT NULL,
+    isGroup        BOOLEAN NOT NULL,
     orderId        INT REFERENCES orders(id) ON DELETE SET NULL ON UPDATE CASCADE DEFAULT NULL,
     date           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     comment        TEXT

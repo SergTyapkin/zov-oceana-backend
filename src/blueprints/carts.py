@@ -90,7 +90,7 @@ def setGoodsInCart(userData):
     insertHistory(
         userData['id'],
         'cart',
-        f'Set all goods in cart: User: #{userId}, Goods: {goods}'
+        f'Sets all goods in cart: User: #{userId}, Goods: {goods}'
     )
 
     return jsonResponse("Корзина перезаписана")
@@ -119,7 +119,7 @@ def updateGoodsInCartAmount(userData):
     insertHistory(
         userData['id'],
         'cart',
-        f'Update goods in cart amount: User: #{userId}, Goods: #{goods["id"]} {goods["title"]}: {amount}, #{cart["id"]}'
+        f'Updated goods in cart amount: User: #{userId}, Goods: #{goods["id"]} {goods["title"]}: {amount}, #{cart["id"]}'
     )
 
     return jsonResponse(cart)
@@ -144,7 +144,7 @@ def deleteGoodsFromCart(userData):
     insertHistory(
         userData['id'],
         'cart',
-        f'Delete goods from cart: User #{userId}, Goods ids #{goodsIds}'
+        f'Deleted goods from cart: User #{userId}, Goods ids #{goodsIds}'
     )
 
     return jsonResponse("Товар удален из корзины")

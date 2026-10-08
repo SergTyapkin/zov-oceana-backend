@@ -1,6 +1,6 @@
 insertPartner = \
-    "INSERT INTO partners (userId, newbieBonusPeriodsLeft, personalBonuses) " \
-    "VALUES (%s, %s, %s) " \
+    "INSERT INTO partners (userId, newbieBonusPeriodsLeft, personalBonuses, qualityId) " \
+    "VALUES (%s, %s, %s, %s) " \
     "RETURNING *"
 
 # ------------------
@@ -81,7 +81,7 @@ updatePartnerAddBranchTotalBonusesByUserId = \
     "RETURNING *"
 
 
-updatePartnersDeactivateNotActivated = \
+updatePartnersDeactivateNotActivatedInMonth = \
     "UPDATE partners SET " \
     "isActive = FALSE " \
     "WHERE activatedDate < DATE_TRUNC('month', NOW()) " \

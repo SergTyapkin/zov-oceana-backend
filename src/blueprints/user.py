@@ -203,7 +203,7 @@ def userRegister():
     insertHistory(
         userData['id'],
         'account',
-        'Registration'
+        'Registered'
     )
     return new_session(userData, clientBrowser, clientOS, detectGeoLocation(), request.environ['IP_ADDRESS'])
 
@@ -239,7 +239,7 @@ def userAnotherSessionsDelete(userData):
     insertHistory(
         userData['id'],
         'account',
-        'Revoke all other sessions'
+        'Revokes all other sessions'
     )
     return res
 
@@ -373,7 +373,7 @@ def userUpdate(userData):
     insertHistory(
         userId,
         'account',
-        f'Update by user #{userData["id"]}: {json.dumps(req)}'
+        f'Updated by user #{userData["id"]}: {json.dumps(req)}'
     )
     return jsonResponse(resp)
 
@@ -395,7 +395,7 @@ def userDelete(userData):
     insertHistory(
         userId,
         'account',
-        f'Delete by user #{userData["id"]}'
+        f'Deleted by user #{userData["id"]}'
     )
     return jsonResponse("Пользователь удален")
 
@@ -480,6 +480,6 @@ def userUpdatePassword(userId):
     insertHistory(
         resp['id'],
         'account',
-        f'Password change'
+        f'Password changed'
     )
     return jsonResponse("Пароль изменен")

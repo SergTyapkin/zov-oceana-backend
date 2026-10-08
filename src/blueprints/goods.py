@@ -93,7 +93,7 @@ def goodsCreate(userData):
     insertHistory(
         userData["id"],
         'goods',
-        f'Create goods: "{goods["title"]}" #{goods["id"]}'
+        f'Created goods: "{goods["title"]}" #{goods["id"]}'
     )
 
     return jsonResponse(goods)
@@ -114,7 +114,7 @@ def addGoodsToCategory(userData):
     insertHistory(
         userData["id"],
         'goods',
-        f'Goods added to category: "#{goods["id"]}, to #"{categoryId}"'
+        f'Adds goods to category: "#{goods["id"]}, to #"{categoryId}"'
     )
 
     return jsonResponse(goods)
@@ -168,7 +168,7 @@ def goodsUpdate(userData):
     insertHistory(
         userData["id"],
         'goods',
-        f'Update goods: {json.dumps(req)}'
+        f'Updated goods: {json.dumps(req)}'
     )
     
     # Обновляем сортировку картинок
@@ -193,7 +193,7 @@ def goodsDelete(userData):
     insertHistory(
         userData["id"],
         'goods',
-        f'Delete goods: #{id}'
+        f'Deleted goods: #{id}'
     )
 
     return jsonResponse("Товар удален")
@@ -215,7 +215,7 @@ def deleteGoodsFromCategory(userData):
     insertHistory(
         userData["id"],
         'goods',
-        f'Delete goods from category: #{goodsId} from #{categoryId}'
+        f'Deleted goods from category: #{goodsId} from #{categoryId}'
     )
 
     return jsonResponse("Товар удален из категории")

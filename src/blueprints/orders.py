@@ -19,30 +19,34 @@ from src.database.SQLRequests import goods as SQLGoods
 app = Blueprint('orders', __name__)
 
 
+def getOrderGoods(orderData):
+    orderGoods = DB.execute(SQLOrders.selectOrderGoodsByOrderId, [orderData['id']], manyResults=True)
+    for goods in orderGoods:
+        prepareGoodsData(goods, False, False)
+    return orderGoods
+
+def getOrderAddress(orderData):
+    if orderData['addressid'] is None: return None
+    address = DB.execute(SQLAddresses.selectAddressById, [orderData['addressid']])
+    return address or None
+
 def prepareOrder(orderData, addGoods = True, addAddress = True):
     if addGoods:
-        orderGoods = DB.execute(SQLOrders.selectOrderGoodsByOrderId, [orderData['id']], manyResults=True)
-        for goods in orderGoods:
-            prepareGoodsData(goods, True, False)
-        orderData['goods'] = orderGoods
+        orderData['goods'] = getOrderGoods(orderData)
     if addAddress:
-        if orderData['addressid']:
-            address = DB.execute(SQLAddresses.selectAddressById, [orderData['addressid']])
-            orderData['address'] = address or None
-        else:
-            orderData['address'] = None
+        orderData['address'] = getOrderAddress(orderData)
 
-def getOrderTotalCost(orderData):
+def getOrderTotalCostX100(orderData):
     totalCost = 0
     orderGoods = DB.execute(SQLOrders.selectOrderGoodsByOrderId, [orderData['id']], manyResults=True)
     for goods in orderGoods:
-        totalCost += goods['amount'] * goods['cost']
+        totalCost += int(goods.get('amount', 1) * int(goods['cost'] * 100)) # сумма в копейках
     return totalCost
 
-def getOrdersTotalCost(orders):
+def getOrdersTotalCostX100(orders):
     totalCost = 0
     for order in orders:
-        totalCost += getOrderTotalCost(order)
+        totalCost += getOrderTotalCostX100(order)
     return totalCost
 
 
@@ -163,7 +167,7 @@ def createOrder(userData):
     insertHistory(
         userId,
         'order',
-        f'Creates order: {orderData["number"]} #{orderData["id"]}", goods: {goods}'
+        f'Created order: {orderData["number"]} #{orderData["id"]}", goods: {goods}'
     )
     
     try:
@@ -223,7 +227,7 @@ def createOrderByAdmin(userData):
     insertHistory(
         userId,
         'order',
-        f'Creates order: {orderData["number"]} #{orderData["id"]}", goods: {goods}'
+        f'Created order: {orderData["number"]} #{orderData["id"]}", goods: {goods}'
     )
 
     try:
@@ -306,7 +310,7 @@ def updateOrderData(userData):
     insertHistory(
         userData['id'],
         'order',
-        f'Update order: {orderData["number"]} #{orderData["id"]} {json.dumps(req)}'
+        f'Updated order: {orderData["number"]} #{orderData["id"]} {json.dumps(req)}'
     )
 
     # Проверяем, необходимо ли начислить бонусные баллы реферелам за заказ, и начисляем
@@ -378,7 +382,7 @@ def deleteOrder(userData):
     insertHistory(
         userData['id'],
         'order',
-        f'Delete order: #{orderId}'
+        f'Deleted order: #{orderId}'
     )
 
     try:

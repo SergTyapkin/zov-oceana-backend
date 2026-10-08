@@ -41,7 +41,7 @@ def globalsUpdate(userData):
     insertHistory(
         userData['id'],
         'globals',
-        f'Set globals: {json.dumps(req)}'
+        f'Sets globals: {json.dumps(req)}'
     )
     return jsonResponse(resp)
 

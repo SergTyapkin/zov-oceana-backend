@@ -1,6 +1,7 @@
 from config import CONFIG
 from connections import DB
 
+from database.databaseUtils import insertHistory
 from src.database.SQLRequests import globals as SQLGlobals
 from src.database.SQLRequests import partners as SQLPartners
 from src.database.SQLRequests import qualities as SQLQualities
@@ -10,6 +11,12 @@ from operator import itemgetter
 
 
 if __name__ == '__main__':
+    insertHistory(
+        None,
+        'system',
+        f'Monthly check started'
+    )
+    
     # Просто получаем все квалификации
     qualities = DB.execute(SQLQualities.selectAllQualities, [], manyResults=True)
     qualities.sort(key=itemgetter("branchdeepforquality"))
@@ -17,7 +24,13 @@ if __name__ == '__main__':
     qualitiesWithBonusesReversed = qualitiesWithBonuses[::-1]
 
     # Деактивируем всех партнеров, кто не активировался в этом месяце
-    DB.execute(SQLPartners.updatePartnersDeactivateNotActivated)
+    deactivatedPartners = DB.execute(SQLPartners.updatePartnersDeactivateNotActivatedInMonth)
+    for partner in deactivatedPartners:
+        insertHistory(
+            partner['userid'],
+            'partners',
+            f'Deactivated by monthly check'
+        )
 
     # Уменьшаем оставшийся бонус новичка
     DB.execute(SQLPartners.updatePartnersDecreaseNewbieBonusPeriodsLeft)
@@ -51,8 +64,15 @@ if __name__ == '__main__':
                     sum(1 for bVal in branchTotalBonuses if bVal > quality['branchesvaluesrequirement']) >= quality['branchescountrequirement']
                 ):
                 maxQuality = quality
-        
-        partner = DB.execute(SQLQualities.updatePartnerQualityIdByUserid, [maxQuality['id'] if maxQuality else None, partner['id']])
+
+        maxQualityId = maxQuality['id'] if maxQuality else None
+        if partner['qualityid'] != maxQualityId:
+            partner = DB.execute(SQLQualities.updatePartnerQualityIdByUserid, [maxQualityId, partner['id']])
+            insertHistory(
+                partner['userid'],
+                'partners',
+                f'Changed quality to "{maxQuality['title'] if maxQuality else None}" #{maxQualityId}'
+            )
 
         # Считаем бонусы квалификации
         # Проверяем, начиная с самой высшей доступной квалификации с бонусом
@@ -70,7 +90,7 @@ if __name__ == '__main__':
                     if not quality['qualitybonusvalue']:
                         break
                     DB.execute(SQLPartners.updatePartnerAddTotalBonusesByUserId, [quality['qualitybonusvalue'], partner['id']])
-                    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, quality['qualitybonusvalue'], None, f'Бонус квалификации "{quality['title']}"'])
+                    DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, quality['qualitybonusvalue'], False, None, f'Бонус квалификации "{quality['title']}"'])
                     break
 
         # Считаем бонус большой команды
@@ -84,7 +104,7 @@ if __name__ == '__main__':
                 # Начисляем и уменьшаем периоды
                 newBigTeamPeriods -= CONFIG.big_team_bonus_periods_requirements
                 DB.execute(SQLPartners.updatePartnerAddTotalBonusesByUserId, [CONFIG.big_team_bonuses, partner['id']])
-                DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, CONFIG.big_team_bonuses, None, f'Бонус большой команды'])
+                DB.execute(SQLPartnersBonusesHistory.insertPartnerBonusesHistory, [partner['id'], None, CONFIG.big_team_bonuses, False, None, f'Бонус большой команды'])
             # Записываем ему периоды
             DB.execute(SQLPartners.updatePartnerSetBonusBigTeamPeriods, [newBigTeamPeriods, partner['id']])
 
@@ -92,3 +112,8 @@ if __name__ == '__main__':
 
     # Перечисляем суммы баллов за месяц на основной баланс
     DB.execute(SQLPartners.updatePartnersSetMonthlyBonusesToTotal)
+    insertHistory(
+        None,
+        'system',
+        f'Monthly check finished successfully'
+    )

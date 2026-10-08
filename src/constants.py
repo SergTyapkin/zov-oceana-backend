@@ -27,20 +27,3 @@ class OrderPaymentStatuses:
     rejected = 'rejected'
     refunded = 'refunded'    
     cancelled = 'cancelled'    
-
-@dataclass
-class PaymentStatuses:
-    """Статусы платежа Tinkoff"""
-    NEW = 'NEW'  # Платеж создан
-    AUTHORIZED = 'AUTHORIZED'  # Платеж авторизован
-    CONFIRMED = 'CONFIRMED'  # Платеж подтвержден
-    CANCELLED = 'CANCELLED'  # Платеж отменен до авторизации
-    REVERSED = 'REVERSED'  # Платеж отменен
-    PARTIAL_REVERSED = 'PARTIAL_REVERSED'  # Платеж отменен частично
-    REFUNDED = 'REFUNDED'  # Возврат выполнен
-    PARTIAL_REFUNDED = 'PARTIAL_REFUNDED'  # Частичный возврат
-    REJECTED = 'REJECTED'  # Платеж отклонен
-    DEADLINE_EXPIRED = 'DEADLINE_EXPIRED'  # Срок жизни платежа истек
-    CHECKING_3DS = '3DS_CHECKING'  # Идет проверка 3DS
-    CHECKED_3DS = '3DS_CHECKED'  # Проверка 3DS завершена
-    FORM_SHOWED = 'FORM_SHOWED'  # Форма показана
